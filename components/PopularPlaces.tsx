@@ -13,6 +13,7 @@ import { getAllBusinessesForPlaces, type Business } from "@/lib/services/busines
 // Helper function to convert Business to Place format
 function convertBusinessToPlace(business: Business) {
   // Try to get images from business_accounts metadata first, then fallback to gallery_images or image_url
+  // Priority: 1. metadata images 2. gallery_images 3. image_url 4. placeholder
   const metadataImages = business.business_accounts?.[0]?.metadata?.profile?.images || [];
   const galleryImages = business.gallery_images || [];
   const allImages = [...metadataImages, ...galleryImages];
