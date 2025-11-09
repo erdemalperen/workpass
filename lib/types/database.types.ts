@@ -2,7 +2,7 @@
  * Supabase Database Types
  *
  * Bu dosya Supabase CLI ile otomatik generate edilecek.
- * Şu anda boş bir placeholder.
+ * Şu anda tip güvenliği sağlaması için esnek bir placeholder içerir.
  *
  * Generate komutu (Supabase projesi oluşturduktan sonra):
  * npx supabase gen types typescript --project-id YOUR_PROJECT_ID > lib/types/database.types.ts
@@ -19,12 +19,26 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-// Placeholder - will be replaced with actual types
+type GenericRecord = Record<string, any>
+
+type GenericTable = {
+  Row: GenericRecord
+  Insert: GenericRecord
+  Update: GenericRecord
+  Relationships: never[]
+}
+
+type GenericFunction = {
+  Args: GenericRecord
+  Returns: any
+}
+
 export interface Database {
   public: {
-    Tables: {}
-    Views: {}
-    Functions: {}
-    Enums: {}
+    Tables: Record<string, GenericTable>
+    Views: Record<string, GenericTable>
+    Functions: Record<string, GenericFunction>
+    Enums: Record<string, string>
+    CompositeTypes: Record<string, any>
   }
 }

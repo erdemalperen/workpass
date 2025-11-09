@@ -379,7 +379,7 @@ export default function PopularPasses() {
 
                   {/* Features */}
                   <div className="space-y-3 mt-4 pt-4 border-t border-border/20">
-                    {pass.features?.map((feature, i) => (
+                    {pass.features?.map((feature: { text: string }, i: number) => (
                       <div
                         key={i}
                         className="flex items-start gap-3"

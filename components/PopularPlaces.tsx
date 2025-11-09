@@ -338,7 +338,7 @@ export default function PopularPlaces() {
 
                   {/* Additional Tags */}
                   <div className="flex flex-wrap gap-1.5">
-                    {place.tags?.slice(1, 3).map(tag => (
+                    {place.tags?.slice(1, 3).map((tag: string) => (
                       <Badge
                         key={tag}
                         variant="outline"

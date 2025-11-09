@@ -63,9 +63,11 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const ticketsData = (tickets ?? []) as any[];
+
     return NextResponse.json({
       success: true,
-      tickets: (tickets ?? []).map((t) => ({
+      tickets: ticketsData.map((t) => ({
         id: t.id,
         subject: t.subject,
         status: t.status,

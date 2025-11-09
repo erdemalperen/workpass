@@ -23,6 +23,9 @@ export interface AdminBusiness {
     };
   };
 
+  imageUrl?: string | null;
+  galleryImages?: string[];
+
   businessDetails: {
     taxNumber?: string;
     registrationNumber?: string;

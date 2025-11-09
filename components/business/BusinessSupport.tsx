@@ -12,12 +12,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageSquare, Send, AlertCircle, CheckCircle, Clock, Phone, Mail, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
-const defaultTickets = [
+type BusinessTicket = {
+  id: string;
+  subject: string;
+  status: "open" | "in_progress" | "resolved";
+  priority: "low" | "medium" | "high";
+  date: string;
+  responses: number;
+  lastUpdate: string;
+  description: string;
+};
+
+const defaultTickets: BusinessTicket[] = [
   {
     id: "TK-001",
     subject: "QR Scanner Not Working",
-    status: "resolved" as const,
-    priority: "high" as const,
+    status: "resolved",
+    priority: "high",
     date: "2024-10-12",
     responses: 3,
     lastUpdate: "2 days ago",
@@ -26,8 +37,8 @@ const defaultTickets = [
   {
     id: "TK-002",
     subject: "Update Business Hours",
-    status: "in_progress" as const,
-    priority: "medium" as const,
+    status: "in_progress",
+    priority: "medium",
     date: "2024-10-13",
     responses: 1,
     lastUpdate: "1 day ago",
@@ -36,8 +47,8 @@ const defaultTickets = [
   {
     id: "TK-003",
     subject: "Question About Discounts",
-    status: "open" as const,
-    priority: "low" as const,
+    status: "open",
+    priority: "low",
     date: "2024-10-14",
     responses: 0,
     lastUpdate: "3 hours ago",
@@ -48,7 +59,7 @@ const defaultTickets = [
 export default function BusinessSupport() {
   const { business, loading } = useBusinessContext();
   const [formData, setFormData] = useState({ subject: "", message: "", priority: "medium" });
-  const [tickets, setTickets] = useState(defaultTickets);
+  const [tickets, setTickets] = useState<BusinessTicket[]>(defaultTickets);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {

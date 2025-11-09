@@ -1,6 +1,5 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
-import type { Database } from '@/lib/types/database.types'
 
 /**
  * Middleware helper for Supabase authentication
@@ -17,7 +16,7 @@ export async function updateSession(request: NextRequest) {
     },
   })
 
-  const supabase = createServerClient<Database>(
+  const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {

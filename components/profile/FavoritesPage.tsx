@@ -36,7 +36,7 @@ export default function FavoritesPage() {
           name: passData.title,
           short_description: passData.description,
           description: passData.description,
-          image_url: passData.bannerImage || passData.image,
+          image_url: passData.bannerImage || passData.includedPlaces?.[0]?.image || "/placeholder-pass.jpg",
           status: 'active',
           popular: passData.popular ?? false,
           pricing: (passData.passOptions || []).map((option) => ({

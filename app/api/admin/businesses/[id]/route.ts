@@ -186,7 +186,7 @@ export async function PUT(
     // Check if business exists
     const { data: existingBusiness, error: checkError } = await supabase
       .from('businesses')
-      .select('id, name, email, contact_name, contact_email, contact_phone, contact_position, city, district, tax_number, registration_number, established, website, slug')
+      .select('id, name, email, contact_name, contact_email, contact_phone, contact_position, city, district, tax_number, registration_number, established, website, slug, status')
       .eq('id', id)
       .single();
 

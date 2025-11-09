@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+type ReviewFilter = "all" | "replied" | "pending";
+
 const defaultReviews = [
   {
     id: 1,
@@ -91,7 +93,7 @@ const defaultReviews = [
 
 export default function BusinessReviews() {
   const { business, loading } = useBusinessContext();
-  const [filter, setFilter] = useState<"all" | "replied" | "pending">("all");
+  const [filter, setFilter] = useState<ReviewFilter>("all");
   const [replyText, setReplyText] = useState<Record<number | string, string>>({});
   const [showReplyForm, setShowReplyForm] = useState<Record<number | string, boolean>>({});
   const [apiReviews, setApiReviews] = useState<
@@ -257,7 +259,7 @@ export default function BusinessReviews() {
 
         <div className="flex items-center gap-4">
           <Filter className="h-5 w-5 text-muted-foreground" />
-          <Select value={filter} onValueChange={setFilter}>
+          <Select value={filter} onValueChange={(value) => setFilter(value as ReviewFilter)}>
             <SelectTrigger className="w-48">
               <SelectValue />
             </SelectTrigger>

@@ -31,6 +31,7 @@ import { toast } from "sonner";
 
 type ProfileResponse = {
   success: boolean;
+  error?: string;
   account: {
     metadata?: Record<string, any>;
   };

@@ -124,11 +124,11 @@ export async function GET(request: NextRequest) {
 
     if (historyError) throw historyError;
 
+    const usageRowsData = (usageRows ?? []) as any[];
+
     const passIds = Array.from(
       new Set(
-        (usageRows ?? [])
-          .map((row) => row.purchased_pass_id)
-          .filter((id): id is string => Boolean(id)),
+        usageRowsData.map((row) => row.purchased_pass_id).filter((id): id is string => Boolean(id)),
       ),
     );
 
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const items = (usageRows ?? []).map((row) => {
+    const items = usageRowsData.map((row) => {
       const purchasedPass = row.purchased_passes;
       const passRecord = purchasedPasses.find(
         (pass) => pass.id === row.purchased_pass_id,

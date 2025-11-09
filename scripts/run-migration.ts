@@ -14,14 +14,13 @@ import { readFileSync } from 'fs'
 import { join } from 'path'
 
 async function runMigration(migrationFile: string) {
-  console.log(`\n🔄 Running migration: ${migrationFile}\n`)
+  console.log(`\n==> Running migration: ${migrationFile}\n`)
 
-  // Create Supabase client with service role key
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('❌ Error: Missing Supabase credentials in .env.local')
+    console.error('ERROR: Missing Supabase credentials in .env.local')
     console.error('   Make sure NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set')
     process.exit(1)
   }
@@ -29,75 +28,75 @@ async function runMigration(migrationFile: string) {
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
+      persistSession: false,
+    },
   })
 
   try {
-    // Read SQL file
     const sqlPath = join(process.cwd(), migrationFile)
     const sql = readFileSync(sqlPath, 'utf-8')
 
-    console.log('📄 SQL Content:')
-    console.log('─'.repeat(60))
+    console.log('==> SQL Content Preview:')
+    console.log('-'.repeat(60))
     console.log(sql.substring(0, 200) + '...\n')
 
-    // Execute SQL using Supabase REST API
-    const { data, error } = await supabase.rpc('exec_sql', { sql_query: sql }).catch(async () => {
-      // If exec_sql doesn't exist, use direct REST API call
+    let data: any = null
+    let error: any = null
+    let manualExecutionRequired = false
+
+    try {
+      const rpcResult = await supabase.rpc('exec_sql', { sql_query: sql })
+      data = rpcResult.data
+      error = rpcResult.error
+    } catch {
       const response = await fetch(`${supabaseUrl}/rest/v1/rpc/exec_sql`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': supabaseServiceKey,
-          'Authorization': `Bearer ${supabaseServiceKey}`
+          apikey: supabaseServiceKey,
+          Authorization: `Bearer ${supabaseServiceKey}`,
         },
-        body: JSON.stringify({ sql_query: sql })
+        body: JSON.stringify({ sql_query: sql }),
       })
 
       if (!response.ok) {
-        // If exec_sql RPC doesn't exist, we need to use psql or Supabase Management API
-        console.log('⚠️  Direct SQL execution not available via RPC')
-        console.log('📋 Please run this SQL manually in Supabase Dashboard > SQL Editor:\n')
-        console.log('─'.repeat(60))
-        console.log(sql)
-        console.log('─'.repeat(60))
-        console.log('\n✅ After running the SQL, press Enter to continue...')
-
-        return { manualExecution: true }
+        manualExecutionRequired = true
+      } else {
+        data = await response.json()
       }
-
-      return await response.json()
-    })
+    }
 
     if (error) {
-      console.error('❌ Migration failed:', error)
+      console.error('ERROR: Migration failed:', error)
       process.exit(1)
     }
 
-    if (data && (data as any).manualExecution) {
-      // Wait for user input
-      await new Promise(resolve => {
-        process.stdin.once('data', resolve)
+    if (manualExecutionRequired) {
+      console.log('WARNING: Direct SQL execution not available via exec_sql RPC')
+      console.log('Please run this SQL manually in Supabase Dashboard > SQL Editor:\n')
+      console.log('-'.repeat(60))
+      console.log(sql)
+      console.log('-'.repeat(60))
+      console.log('\nPress Enter after running the SQL to continue...')
+      await new Promise<void>((resolve) => {
+        process.stdin.once('data', () => resolve())
       })
-      console.log('✅ Assuming migration was run successfully manually')
+      console.log('Resuming after manual execution confirmation...')
     } else {
-      console.log('✅ Migration completed successfully!')
+      console.log('SUCCESS: Migration completed successfully!')
     }
-
   } catch (error) {
-    console.error('❌ Error running migration:', error)
-    console.log('\n📋 Please run this SQL manually in Supabase Dashboard > SQL Editor')
-    console.log('   URL: https://supabase.com/dashboard/project/dpnlyvgqdbagbrjxuvgw/sql/new')
+    console.error('ERROR running migration:', error)
+    console.log('\nPlease run this SQL manually in Supabase Dashboard > SQL Editor')
+    console.log('URL: https://supabase.com/dashboard/project/dpnlyvgqdbagbrjxuvgw/sql/new')
     process.exit(1)
   }
 }
 
-// Get migration file from command line argument
 const migrationFile = process.argv[2]
 
 if (!migrationFile) {
-  console.error('❌ Error: Please provide migration file path')
+  console.error('ERROR: Please provide migration file path')
   console.error('   Usage: tsx scripts/run-migration.ts <migration-file>')
   console.error('   Example: tsx scripts/run-migration.ts supabase/migrations/001_create_admin_profiles.sql')
   process.exit(1)

@@ -91,7 +91,7 @@ export async function GET() {
 
     if (todayError) throw todayError;
 
-    const { data: usageRows, error: usageError } = await supabaseAdmin
+    const { data: usageRowsData, error: usageError } = await supabaseAdmin
       .from("pass_usage_history")
       .select(
         `
@@ -120,11 +120,11 @@ export async function GET() {
 
     if (usageError) throw usageError;
 
+    const usageRows = (usageRowsData ?? []) as unknown as UsageRow[];
+
     const passIds = Array.from(
       new Set(
-        (usageRows ?? [])
-          .map((row) => row.purchased_pass_id)
-          .filter((id): id is string => Boolean(id)),
+        usageRows.map((row) => row.purchased_pass_id).filter((id): id is string => Boolean(id)),
       ),
     );
 
@@ -173,7 +173,7 @@ export async function GET() {
 
     let totalOriginal = 0;
     let totalDiscounted = 0;
-    (usageRows ?? []).forEach((row) => {
+    usageRows.forEach((row) => {
       if (row.original_amount) {
         totalOriginal += Number(row.original_amount);
       }
@@ -182,7 +182,7 @@ export async function GET() {
       }
     });
 
-    const recentScans = (usageRows ?? []).slice(0, 5).map((row) => {
+    const recentScans = usageRows.slice(0, 5).map((row) => {
       const purchasedPass = row.purchased_passes;
       const customerId =
         purchasedPass?.customer_id ??

@@ -44,6 +44,7 @@ export default function SignupPage() {
     agreeToTerms: false,
     subscribeNewsletter: true,
     businessName: "",
+    businessCategory: "",
     contactPhone: "",
   });
   const [showPassword, setShowPassword] = useState(false);
