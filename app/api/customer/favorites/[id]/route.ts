@@ -4,8 +4,9 @@ import { createClient } from '@/lib/supabase/server';
 // DELETE remove favorite by ID
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const supabase = await createClient();
 
@@ -19,7 +20,7 @@ export async function DELETE(
       }, { status: 401 });
     }
 
-    const favoriteId = params.id;
+    const favoriteId = id;
 
     // Delete favorite (RLS ensures user can only delete their own)
     const { error: deleteError } = await supabase
