@@ -46,6 +46,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     if (responsesError) throw responsesError;
 
+    const businessField: any = ticket.business;
+    const businessName = Array.isArray(businessField)
+      ? businessField[0]?.name
+      : businessField?.name;
+
     return NextResponse.json({
       success: true,
       ticket: {
@@ -55,7 +60,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
         status: ticket.status,
         createdAt: ticket.created_at,
         updatedAt: ticket.updated_at,
-        from: ticket.business?.name ?? "Business",
+        from: businessName ?? "Business",
       },
       messages: (responses ?? []).map((response) => ({
         id: response.id,
