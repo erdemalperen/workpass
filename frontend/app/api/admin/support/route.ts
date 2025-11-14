@@ -75,6 +75,10 @@ export async function GET(request: NextRequest) {
         const lastUpdate = ticketResponses.length > 0
           ? ticketResponses[ticketResponses.length - 1].created_at
           : t.updated_at;
+        const businessField: any = t.business;
+        const businessName = Array.isArray(businessField)
+          ? businessField[0]?.name
+          : businessField?.name;
 
         return {
           id: t.id,
@@ -83,7 +87,7 @@ export async function GET(request: NextRequest) {
           priority: t.priority,
           date: t.created_at,
           lastUpdate,
-          from: t.business?.name ?? "Business",
+          from: businessName ?? "Business",
           type: "business",
           responses: ticketResponses.map((r) => ({
             id: r.id,
