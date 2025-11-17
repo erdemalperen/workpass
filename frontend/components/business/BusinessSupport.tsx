@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useBusinessContext } from "./BusinessLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -457,10 +457,16 @@ function TicketConversationDialog({ ticketId, open, initialMessages, onSend }: T
   const [messages, setMessages] = useState<TicketResponse[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMessages(initialMessages);
   }, [initialMessages]);
+
+  // Keep the latest message visible when content grows (mobile-friendly).
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
 
   const fetchConversation = useCallback(async () => {
     try {
@@ -498,8 +504,8 @@ function TicketConversationDialog({ ticketId, open, initialMessages, onSend }: T
   };
 
   return (
-    <div className="space-y-4">
-      <ScrollArea className="max-h-[320px] pr-2">
+    <div className="flex flex-col gap-4 h-full">
+      <ScrollArea className="max-h-[60vh] md:max-h-[420px] pr-2 border rounded-lg">
         <div className="space-y-3">
           {isLoading ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Loading conversation...</p>
@@ -523,6 +529,7 @@ function TicketConversationDialog({ ticketId, open, initialMessages, onSend }: T
               </div>
             ))
           )}
+          <div ref={endRef} />
         </div>
       </ScrollArea>
       <div className="space-y-2">

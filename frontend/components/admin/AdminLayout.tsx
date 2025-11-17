@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabaseAdminAuth } from "@/lib/services/supabaseAdminAuth";
 import type { Admin } from "@/lib/types/admin";
 import { useRouter, usePathname } from "next/navigation";
@@ -56,6 +56,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const refreshNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/notifications");
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to fetch notifications");
+      }
+
+      setNotifications(
+        json.notifications.map((n: any) => ({
+          id: n.id,
+          title: n.title,
+          message: n.message,
+          type: n.type,
+          createdAt: n.created_at,
+          read: n.read,
+        }))
+      );
+      setUnreadCount(json.unreadCount || 0);
+    } catch (error) {
+      console.error("Failed to load notifications:", error);
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, []);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -98,43 +124,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     initAuth();
   }, []);
 
-  // Load notifications
+  // Load notifications; refresh on focus and at interval
   useEffect(() => {
-    const loadNotifications = async () => {
-      try {
-        const res = await fetch("/api/admin/notifications");
-        const json = await res.json();
-
-        if (!res.ok || !json.success) {
-          throw new Error(json.error || "Failed to fetch notifications");
-        }
-
-        setNotifications(
-          json.notifications.map((n: any) => ({
-            id: n.id,
-            title: n.title,
-            message: n.message,
-            type: n.type,
-            createdAt: n.created_at,
-            read: n.read,
-          }))
-        );
-        setUnreadCount(json.unreadCount || 0);
-      } catch (error) {
-        console.error("Failed to load notifications:", error);
-        // Fallback to empty array on error
-        setNotifications([]);
-        setUnreadCount(0);
-      }
+    if (!admin) return;
+    refreshNotifications();
+    const interval = setInterval(refreshNotifications, 30000);
+    const handleFocus = () => refreshNotifications();
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
     };
-
-    if (admin) {
-      loadNotifications();
-      // Refresh notifications every 30 seconds
-      const interval = setInterval(loadNotifications, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [admin]);
+  }, [admin, refreshNotifications]);
 
   // Prefetch sık kullanılan admin sayfaları
   useEffect(() => {
@@ -362,7 +363,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h2 className="text-lg font-semibold md:hidden">Admin Panel</h2>
           </div>
 
-          <DropdownMenu>
+          <DropdownMenu onOpenChange={(open) => open && refreshNotifications()}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
