@@ -1,0 +1,15 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "frontend/.next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "20.10.0"
+  NPM_FLAGS = "--legacy-peer-deps"
+
+# Force fresh builds
+[context.production]
+  command = "rm -rf .next && npm run build"
