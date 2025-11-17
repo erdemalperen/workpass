@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-export async function GET(_request: NextRequest, { params }: { params: { ticketId: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ ticketId: string }> }) {
   try {
+    const { ticketId } = await params;
     const supabase = await createClient();
 
     const {
@@ -27,7 +28,7 @@ export async function GET(_request: NextRequest, { params }: { params: { ticketI
     const { data: ticket, error: ticketError } = await supabase
       .from("support_tickets")
       .select("id, subject, priority, status, created_at, updated_at, business:businesses(name)")
-      .eq("id", params.ticketId)
+      .eq("id", ticketId)
       .single();
 
     if (ticketError || !ticket) {
