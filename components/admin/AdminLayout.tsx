@@ -15,6 +15,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
@@ -38,6 +39,25 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState<
+    { id: string; title: string; description: string; time: string; read: boolean }[]
+  >([
+    {
+      id: "1",
+      title: "New business application",
+      description: "A new partner applied for approval.",
+      time: "2m ago",
+      read: false,
+    },
+    {
+      id: "2",
+      title: "Support ticket updated",
+      description: "Ticket #4821 marked as resolved.",
+      time: "1h ago",
+      read: true,
+    },
+  ]);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -112,6 +132,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3, permission: "analytics" as const },
     { name: "Settings", href: "/admin/settings", icon: Settings, permission: "settings" as const },
   ];
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
 
   const filteredNavigation = navigation.filter(item => {
     if (!item.permission) return true;
@@ -228,10 +254,56 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h2 className="text-lg font-semibold md:hidden">Admin Panel</h2>
           </div>
 
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-          </Button>
+          <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0">
+              <div className="px-3 py-2 flex items-center justify-between border-b">
+                <p className="text-sm font-semibold">Notifications</p>
+                {notifications.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline"
+                    onClick={markAllRead}
+                  >
+                    Mark all read
+                  </button>
+                )}
+              </div>
+              {notifications.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-muted-foreground">No notifications</div>
+              ) : (
+                <div className="max-h-80 overflow-y-auto py-1">
+                  {notifications.map((notif) => (
+                    <button
+                      key={notif.id}
+                      className="w-full text-left px-3 py-2 hover:bg-muted transition-colors"
+                      onClick={() =>
+                        setNotifications((prev) =>
+                          prev.map((n) => (n.id === notif.id ? { ...n, read: true } : n)),
+                        )
+                      }
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{notif.title}</span>
+                        {!notif.read && (
+                          <span className="text-[10px] text-primary font-semibold">New</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{notif.description}</p>
+                      <span className="text-[11px] text-muted-foreground">{notif.time}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild className="hidden md:flex">

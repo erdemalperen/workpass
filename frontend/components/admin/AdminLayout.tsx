@@ -7,6 +7,8 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,8 +31,22 @@ import {
   Menu,
   Shield,
   Bell,
-  BarChart3
+  BarChart3,
+  Check,
+  AlertCircle,
+  CheckCircle,
+  Info,
+  AlertTriangle
 } from "lucide-react";
+
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "warning" | "success" | "error";
+  createdAt: string;
+  read: boolean;
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -38,6 +54,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [admin, setAdmin] = useState<Admin | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     const initAuth = async () => {
@@ -79,6 +97,44 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     initAuth();
   }, []);
+
+  // Load notifications
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const res = await fetch("/api/admin/notifications");
+        const json = await res.json();
+
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || "Failed to fetch notifications");
+        }
+
+        setNotifications(
+          json.notifications.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            type: n.type,
+            createdAt: n.created_at,
+            read: n.read,
+          }))
+        );
+        setUnreadCount(json.unreadCount || 0);
+      } catch (error) {
+        console.error("Failed to load notifications:", error);
+        // Fallback to empty array on error
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+    };
+
+    if (admin) {
+      loadNotifications();
+      // Refresh notifications every 30 seconds
+      const interval = setInterval(loadNotifications, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [admin]);
 
   // Prefetch sık kullanılan admin sayfaları
   useEffect(() => {
@@ -131,6 +187,84 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       console.error('Logout error:', error);
       // Force logout even if error
       window.location.href = "/admin/login";
+    }
+  };
+
+  const handleMarkAsRead = async (notificationId: string) => {
+    try {
+      // Optimistic update
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+
+      // API call
+      const res = await fetch("/api/admin/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to mark notification as read");
+      }
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      // Revert on error - reload notifications
+      const res = await fetch("/api/admin/notifications");
+      const json = await res.json();
+      if (json.success) {
+        setNotifications(
+          json.notifications.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            type: n.type,
+            createdAt: n.created_at,
+            read: n.read,
+          }))
+        );
+        setUnreadCount(json.unreadCount || 0);
+      }
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      // Optimistic update
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      setUnreadCount(0);
+
+      // API call
+      const res = await fetch("/api/admin/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAllAsRead: true }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to mark all notifications as read");
+      }
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+      // Revert on error - reload notifications
+      const res = await fetch("/api/admin/notifications");
+      const json = await res.json();
+      if (json.success) {
+        setNotifications(
+          json.notifications.map((n: any) => ({
+            id: n.id,
+            title: n.title,
+            message: n.message,
+            type: n.type,
+            createdAt: n.created_at,
+            read: n.read,
+          }))
+        );
+        setUnreadCount(json.unreadCount || 0);
+      }
     }
   };
 
@@ -228,10 +362,107 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <h2 className="text-lg font-semibold md:hidden">Admin Panel</h2>
           </div>
 
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80">
+              <div className="flex items-center justify-between px-4 py-3 border-b">
+                <div>
+                  <h3 className="font-semibold">Notifications</h3>
+                  <p className="text-xs text-muted-foreground">
+                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up!'}
+                  </p>
+                </div>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleMarkAllAsRead}
+                    className="h-8 text-xs"
+                  >
+                    <Check className="h-3 w-3 mr-1" />
+                    Mark all read
+                  </Button>
+                )}
+              </div>
+              <ScrollArea className="max-h-[400px]">
+                {notifications.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <Bell className="h-12 w-12 text-muted-foreground opacity-20 mb-3" />
+                    <p className="text-sm text-muted-foreground">No notifications yet</p>
+                  </div>
+                ) : (
+                  <div className="divide-y">
+                    {notifications.map((notification) => {
+                      const Icon =
+                        notification.type === "success"
+                          ? CheckCircle
+                          : notification.type === "warning"
+                          ? AlertTriangle
+                          : notification.type === "error"
+                          ? AlertCircle
+                          : Info;
+
+                      return (
+                        <div
+                          key={notification.id}
+                          className={`px-4 py-3 hover:bg-accent cursor-pointer transition-colors ${
+                            !notification.read ? "bg-accent/50" : ""
+                          }`}
+                          onClick={() => !notification.read && handleMarkAsRead(notification.id)}
+                        >
+                          <div className="flex gap-3">
+                            <div
+                              className={`mt-0.5 flex-shrink-0 ${
+                                notification.type === "success"
+                                  ? "text-green-500"
+                                  : notification.type === "warning"
+                                  ? "text-yellow-500"
+                                  : notification.type === "error"
+                                  ? "text-red-500"
+                                  : "text-blue-500"
+                              }`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-start justify-between gap-2">
+                                <p className="text-sm font-medium leading-none">
+                                  {notification.title}
+                                </p>
+                                {!notification.read && (
+                                  <div className="h-2 w-2 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {new Date(notification.createdAt).toLocaleString('en-US', {
+                                  hour: 'numeric',
+                                  minute: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                })}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild className="hidden md:flex">

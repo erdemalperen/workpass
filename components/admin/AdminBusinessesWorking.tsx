@@ -96,6 +96,7 @@ export default function AdminBusinessesWorking() {
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSendingNotification, setIsSendingNotification] = useState(false);
 
   const transformBusiness = useCallback((business: any): AdminBusinessWithMeta => {
     const status = mapStatusFromDb(business.status);
@@ -328,7 +329,7 @@ export default function AdminBusinessesWorking() {
   const [notificationData, setNotificationData] = useState({
     title: "",
     message: "",
-    type: "info" as "info" | "warning" | "success" | "error"
+    type: "info" as "info" | "success" | "alert" | "offer"
   });
   const [passwordResetBusiness, setPasswordResetBusiness] = useState<AdminBusinessWithMeta | null>(null);
   const [suspendBusiness, setSuspendBusiness] = useState<AdminBusinessWithMeta | null>(null);
@@ -614,12 +615,46 @@ export default function AdminBusinessesWorking() {
     setIsNotificationDialogOpen(true);
   };
 
-  const confirmSendNotification = () => {
+  const confirmSendNotification = async () => {
+    if (isSendingNotification) return;
     const count = selectedBusinessIds.length;
-    toast.success(`Notification sent to ${count} business(es)`);
-    setIsNotificationDialogOpen(false);
-    setNotificationData({ title: "", message: "", type: "info" });
-    setSelectedBusinessIds([]);
+    if (!count) {
+      toast.error("Please select at least one business");
+      return;
+    }
+    if (!notificationData.title.trim() || !notificationData.message.trim()) {
+      toast.error("Title and message are required");
+      return;
+    }
+
+    try {
+      setIsSendingNotification(true);
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessIds: selectedBusinessIds,
+          title: notificationData.title.trim(),
+          message: notificationData.message.trim(),
+          type: notificationData.type,
+        }),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Failed to send notification");
+      }
+
+      toast.success(`Notification sent to ${result.count ?? count} business(es)`);
+      setIsNotificationDialogOpen(false);
+      setNotificationData({ title: "", message: "", type: "info" });
+      setSelectedBusinessIds([]);
+    } catch (error: any) {
+      console.error("Failed to send notification:", error);
+      toast.error(error.message ?? "Failed to send notification");
+    } finally {
+      setIsSendingNotification(false);
+    }
   };
 
   const handleViewActivity = (business: AdminBusinessWithMeta) => {
@@ -1096,17 +1131,17 @@ export default function AdminBusinessesWorking() {
                   <SelectContent>
                     <SelectItem value="info">Info</SelectItem>
                     <SelectItem value="success">Success</SelectItem>
-                    <SelectItem value="warning">Warning</SelectItem>
-                    <SelectItem value="error">Error</SelectItem>
+                    <SelectItem value="alert">Alert</SelectItem>
+                    <SelectItem value="offer">Offer</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNotificationDialogOpen(false)}>Cancel</Button>
-              <Button onClick={confirmSendNotification}>
+              <Button onClick={confirmSendNotification} disabled={isSendingNotification}>
                 <Send className="h-4 w-4 mr-2" />
-                Send
+                {isSendingNotification ? "Sending..." : "Send"}
               </Button>
             </DialogFooter>
           </DialogContent>

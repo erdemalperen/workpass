@@ -72,6 +72,15 @@ interface BusinessRecord {
   updated_at?: string;
 }
 
+interface BusinessNotification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+  read: boolean;
+  type?: string | null;
+}
+
 interface BusinessContextValue {
   account: BusinessAccount | null;
   business: BusinessRecord | null;
@@ -105,6 +114,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
     business: null,
     error: null,
   });
+  const [notifications, setNotifications] = useState<BusinessNotification[]>([]);
 
   const fetchAccount = useCallback(async () => {
     // Login sayfasında API çağrısı yapma
@@ -177,6 +187,110 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
     router.push("/business/login");
   }, [router, supabase]);
 
+  const mapNotification = useCallback(
+    (record: any): BusinessNotification => ({
+      id: String(record.id),
+      title: record.title ?? "",
+      message: record.message ?? record.content ?? "",
+      date: record.date ?? record.created_at ?? new Date().toISOString(),
+      read: Boolean(record.read),
+      type: record.type ?? null,
+    }),
+    [],
+  );
+
+  const loadNotifications = useCallback(async () => {
+    const businessId = state.business?.id;
+    if (!businessId) {
+      setNotifications([]);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/business/notifications", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Unable to load notifications");
+      }
+
+      setNotifications((result.notifications ?? []).map(mapNotification));
+    } catch (error) {
+      console.error("Failed to load notifications", error);
+    }
+  }, [mapNotification, state.business?.id]);
+
+  useEffect(() => {
+    if (state.loading) return;
+    loadNotifications();
+  }, [state.loading, loadNotifications]);
+
+  useEffect(() => {
+    const businessId = state.business?.id;
+    if (state.loading || !businessId) return;
+
+    const channel = supabase
+      .channel(`business-notifications-${businessId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          setNotifications((current) => {
+            const mapped = mapNotification(payload.new);
+            const filtered = current.filter((n) => n.id !== mapped.id);
+            const next = [mapped, ...filtered];
+            return next.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          setNotifications((current) => {
+            const mapped = mapNotification(payload.new);
+            const filtered = current.filter((n) => n.id !== mapped.id);
+            const next = [mapped, ...filtered];
+            return next.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${businessId}`,
+        },
+        (payload) => {
+          setNotifications((current) =>
+            current.filter((n) => n.id !== String(payload.old?.id ?? "")),
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [mapNotification, state.business?.id, state.loading, supabase]);
+
   const contextValue = useMemo<BusinessContextValue>(
     () => ({
       account: state.account,
@@ -233,31 +347,7 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
     { name: "Support", href: "/business/support", icon: MessageSquare },
   ];
 
-  const notifications = [
-    {
-      id: 1,
-      title: "New pass scanned",
-      message: "A customer used their pass successfully",
-      time: "5 mins ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "New review",
-      message: "You received a 5-star review",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      title: "System update",
-      message: "New features available in dashboard",
-      time: "2 hours ago",
-      unread: false,
-    },
-  ];
-
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <BusinessContext.Provider value={contextValue}>
@@ -350,15 +440,19 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
                   <div className="px-3 py-2">
                     <p className="text-sm font-semibold">Notifications</p>
                   </div>
-                  {notifications.map((notification) => (
-                    <DropdownMenuItem key={notification.id} className="flex flex-col items-start">
-                      <p className="text-sm font-medium">{notification.title}</p>
-                      <p className="text-xs text-muted-foreground">{notification.message}</p>
-                      <span className="text-[11px] text-muted-foreground mt-1">
-                        {notification.time}
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
+                  {notifications.length === 0 ? (
+                    <div className="px-3 py-2 text-xs text-muted-foreground">No notifications yet</div>
+                  ) : (
+                    notifications.map((notification) => (
+                      <DropdownMenuItem key={notification.id} className="flex flex-col items-start">
+                        <p className="text-sm font-medium">{notification.title}</p>
+                        <p className="text-xs text-muted-foreground">{notification.message}</p>
+                        <span className="text-[11px] text-muted-foreground mt-1">
+                          {new Date(notification.date).toLocaleString()}
+                        </span>
+                      </DropdownMenuItem>
+                    ))
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
 

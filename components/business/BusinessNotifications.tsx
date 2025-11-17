@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useBusinessContext } from "./BusinessLayout";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Gift, AlertCircle, CheckCircle, Info } from "lucide-react";
+import { ArrowLeft, Gift, AlertCircle, CheckCircle, Info, Bell } from "lucide-react";
 import Link from "next/link";
 
 type Notification = {
@@ -17,57 +18,129 @@ type Notification = {
   read: boolean;
 };
 
-const defaultNotifications: Notification[] = [
-  {
-    id: "1",
-    type: "success",
-    title: "New Customer Visit",
-    message: "A TuristPass customer just redeemed their discount at your venue.",
-    date: new Date().toISOString(),
-    read: false,
-  },
-  {
-    id: "2",
-    type: "info",
-    title: "Platform Update",
-    message: "New analytics widgets are now available in your dashboard.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
-    read: false,
-  },
-  {
-    id: "3",
-    type: "alert",
-    title: "Profile Reminder",
-    message: "Add opening hours to your profile to improve visibility.",
-    date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    read: true,
-  },
-];
+const mapNotification = (record: any): Notification => ({
+  id: String(record.id),
+  type: (record.type ?? "info") as Notification["type"],
+  title: record.title ?? "",
+  message: record.message ?? record.content ?? "",
+  date: record.date ?? record.created_at ?? new Date().toISOString(),
+  read: Boolean(record.read),
+});
 
 export default function BusinessNotifications() {
   const { business, loading } = useBusinessContext();
-  const [notifications, setNotifications] = useState(defaultNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadNotifications = useCallback(async () => {
+    if (!business?.id) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/business/notifications", { cache: "no-store" });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.error || "Failed to load notifications");
+      }
+      setNotifications((json.notifications ?? []).map(mapNotification));
+    } catch (err: any) {
+      setError(err.message ?? "Failed to load notifications");
+      setNotifications([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [business?.id]);
+
+  const markAsRead = useCallback(async (notificationId: string) => {
+    if (!notificationId) return;
+
+    setNotifications((current) =>
+      current.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
+    );
+
+    try {
+      await fetch("/api/business/notifications", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notificationId }),
+      });
+    } catch (err) {
+      console.error("Failed to mark notification as read", err);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      if (loading) return;
-      try {
-        setIsLoading(true);
-        const res = await fetch("/api/business/notifications");
-        const json = await res.json();
-        if (res.ok && json.success) {
-          if (mounted) setNotifications(json.notifications);
-        }
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    })();
+    if (loading || !business?.id) return;
+    loadNotifications();
+  }, [loading, business?.id, loadNotifications]);
+
+  useEffect(() => {
+    if (loading || !business?.id) return;
+
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`business-notifications-${business.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${business.id}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          setNotifications((current) => {
+            const mapped = mapNotification(payload.new);
+            const filtered = current.filter((n) => n.id !== mapped.id);
+            const next = [mapped, ...filtered];
+            return next.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${business.id}`,
+        },
+        (payload) => {
+          if (!payload.new) return;
+          setNotifications((current) => {
+            const mapped = mapNotification(payload.new);
+            const filtered = current.filter((n) => n.id !== mapped.id);
+            const next = [mapped, ...filtered];
+            return next.sort(
+              (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+            );
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "business_notifications",
+          filter: `business_id=eq.${business.id}`,
+        },
+        (payload) => {
+          setNotifications((current) =>
+            current.filter((n) => n.id !== String(payload.old?.id ?? "")),
+          );
+        },
+      )
+      .subscribe();
+
     return () => {
-      mounted = false;
+      supabase.removeChannel(channel);
     };
-  }, [loading]);
+  }, [loading, business?.id]);
 
   const getIcon = (type: Notification["type"]) => {
     const icons = { success: CheckCircle, info: Info, alert: AlertCircle, offer: Gift };
@@ -109,30 +182,52 @@ export default function BusinessNotifications() {
       </div>
 
       <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
-        {notifications.map((notif) => {
-          const Icon = getIcon(notif.type);
-          return (
-            <Card key={notif.id} className={!notif.read ? "border-primary/50" : ""}>
-              <CardContent className="pt-6">
-                <div className="flex gap-4">
-                  <div className={`p-2 rounded-lg bg-muted ${getColor(notif.type)}`}>
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <h3 className="font-semibold">{notif.title}</h3>
-                      {!notif.read && <Badge variant="default">New</Badge>}
+        {error && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="p-4 text-sm text-destructive">{error}</CardContent>
+          </Card>
+        )}
+
+        {notifications.length === 0 ? (
+          <Card className="text-center py-12">
+            <CardContent className="space-y-2">
+              <Bell className="h-10 w-10 mx-auto text-muted-foreground" />
+              <p className="font-semibold">No notifications yet</p>
+              <p className="text-sm text-muted-foreground">
+                We&apos;ll let you know here when something important happens.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          notifications.map((notif) => {
+            const Icon = getIcon(notif.type);
+            return (
+              <Card
+                key={notif.id}
+                className={`${!notif.read ? "border-primary/50" : ""} cursor-pointer`}
+                onClick={() => !notif.read && markAsRead(notif.id)}
+              >
+                <CardContent className="pt-6">
+                  <div className="flex gap-4">
+                    <div className={`p-2 rounded-lg bg-muted ${getColor(notif.type)}`}>
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{notif.message}</p>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      {new Date(notif.date).toLocaleString()}
-                    </p>
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold">{notif.title}</h3>
+                        {!notif.read && <Badge variant="default">New</Badge>}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{notif.message}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {new Date(notif.date).toLocaleString()}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
     </div>
   );
