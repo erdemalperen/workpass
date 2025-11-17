@@ -5,8 +5,9 @@ type RouteParams = {
   params: { ticketId: string };
 };
 
-export async function GET(_request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: NextRequest, context: RouteParams) {
   try {
+    const params = await context.params;
     const supabase = await createClient();
 
     const {
