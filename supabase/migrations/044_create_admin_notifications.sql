@@ -26,15 +26,18 @@ CREATE INDEX IF NOT EXISTS idx_admin_notifications_created_at ON admin_notificat
 ALTER TABLE admin_notifications ENABLE ROW LEVEL SECURITY;
 
 -- 4) RLS Policies
+DROP POLICY IF EXISTS "Admins can view their own notifications" ON admin_notifications;
 CREATE POLICY "Admins can view their own notifications"
   ON admin_notifications FOR SELECT
   USING (admin_id = auth.uid());
 
+DROP POLICY IF EXISTS "Admins can update their own notifications" ON admin_notifications;
 CREATE POLICY "Admins can update their own notifications"
   ON admin_notifications FOR UPDATE
   USING (admin_id = auth.uid())
   WITH CHECK (admin_id = auth.uid());
 
+DROP POLICY IF EXISTS "System can insert notifications for any admin" ON admin_notifications;
 CREATE POLICY "System can insert notifications for any admin"
   ON admin_notifications FOR INSERT
   WITH CHECK (true);
@@ -48,6 +51,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_admin_notifications_updated_at ON admin_notifications;
 CREATE TRIGGER trigger_admin_notifications_updated_at
   BEFORE UPDATE ON admin_notifications
   FOR EACH ROW

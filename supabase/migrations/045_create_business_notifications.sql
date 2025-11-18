@@ -26,6 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_business_notifications_created_at ON business_not
 ALTER TABLE business_notifications ENABLE ROW LEVEL SECURITY;
 
 -- 4) RLS Policies
+DROP POLICY IF EXISTS "Businesses can view their own notifications" ON business_notifications;
 CREATE POLICY "Businesses can view their own notifications"
   ON business_notifications FOR SELECT
   USING (
@@ -34,6 +35,7 @@ CREATE POLICY "Businesses can view their own notifications"
     )
   );
 
+DROP POLICY IF EXISTS "Businesses can update their own notifications" ON business_notifications;
 CREATE POLICY "Businesses can update their own notifications"
   ON business_notifications FOR UPDATE
   USING (
@@ -47,6 +49,7 @@ CREATE POLICY "Businesses can update their own notifications"
     )
   );
 
+DROP POLICY IF EXISTS "System can insert notifications for any business" ON business_notifications;
 CREATE POLICY "System can insert notifications for any business"
   ON business_notifications FOR INSERT
   WITH CHECK (true);
@@ -60,6 +63,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_business_notifications_updated_at ON business_notifications;
 CREATE TRIGGER trigger_business_notifications_updated_at
   BEFORE UPDATE ON business_notifications
   FOR EACH ROW
