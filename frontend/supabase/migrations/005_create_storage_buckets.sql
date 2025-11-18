@@ -60,4 +60,15 @@ ON CONFLICT (id) DO NOTHING;
 -- COMMENTS
 -- ============================================
 
-COMMENT ON TABLE storage.buckets IS 'Storage buckets for images and files';
+-- COMMENT requires ownership; wrap to avoid failure when run with a non-owner role.
+DO $$
+BEGIN
+  BEGIN
+    COMMENT ON TABLE storage.buckets IS 'Storage buckets for images and files';
+  EXCEPTION
+    WHEN insufficient_privilege THEN
+      RAISE NOTICE 'Skipping COMMENT on storage.buckets due to insufficient privileges';
+    WHEN undefined_table THEN
+      RAISE NOTICE 'Skipping COMMENT on storage.buckets because table not found';
+  END;
+END $$;
