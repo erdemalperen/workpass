@@ -8,10 +8,12 @@
 -- LOGOS BUCKET POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS "Public can view logos" ON storage.objects;
 CREATE POLICY "Public can view logos"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'logos');
 
+DROP POLICY IF EXISTS "Admins can upload logos" ON storage.objects;
 CREATE POLICY "Admins can upload logos"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -22,6 +24,7 @@ CREATE POLICY "Admins can upload logos"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update logos" ON storage.objects;
 CREATE POLICY "Admins can update logos"
   ON storage.objects FOR UPDATE
   USING (
@@ -32,6 +35,7 @@ CREATE POLICY "Admins can update logos"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete logos" ON storage.objects;
 CREATE POLICY "Admins can delete logos"
   ON storage.objects FOR DELETE
   USING (
@@ -46,10 +50,12 @@ CREATE POLICY "Admins can delete logos"
 -- BANNERS BUCKET POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS "Public can view banners" ON storage.objects;
 CREATE POLICY "Public can view banners"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'banners');
 
+DROP POLICY IF EXISTS "Admins can upload banners" ON storage.objects;
 CREATE POLICY "Admins can upload banners"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -60,6 +66,7 @@ CREATE POLICY "Admins can upload banners"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update banners" ON storage.objects;
 CREATE POLICY "Admins can update banners"
   ON storage.objects FOR UPDATE
   USING (
@@ -70,6 +77,7 @@ CREATE POLICY "Admins can update banners"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete banners" ON storage.objects;
 CREATE POLICY "Admins can delete banners"
   ON storage.objects FOR DELETE
   USING (
@@ -84,10 +92,12 @@ CREATE POLICY "Admins can delete banners"
 -- AVATARS BUCKET POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS "Public can view avatars" ON storage.objects;
 CREATE POLICY "Public can view avatars"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'avatars');
 
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
 CREATE POLICY "Users can upload own avatar"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -95,6 +105,7 @@ CREATE POLICY "Users can upload own avatar"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
 CREATE POLICY "Users can update own avatar"
   ON storage.objects FOR UPDATE
   USING (
@@ -102,6 +113,7 @@ CREATE POLICY "Users can update own avatar"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Users can delete own avatar" ON storage.objects;
 CREATE POLICY "Users can delete own avatar"
   ON storage.objects FOR DELETE
   USING (
@@ -109,6 +121,7 @@ CREATE POLICY "Users can delete own avatar"
     auth.uid()::text = (storage.foldername(name))[1]
   );
 
+DROP POLICY IF EXISTS "Admins can manage all avatars" ON storage.objects;
 CREATE POLICY "Admins can manage all avatars"
   ON storage.objects FOR ALL
   USING (
@@ -123,10 +136,12 @@ CREATE POLICY "Admins can manage all avatars"
 -- BUSINESS IMAGES BUCKET POLICIES
 -- ============================================
 
+DROP POLICY IF EXISTS "Public can view business images" ON storage.objects;
 CREATE POLICY "Public can view business images"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'business-images');
 
+DROP POLICY IF EXISTS "Admins can upload business images" ON storage.objects;
 CREATE POLICY "Admins can upload business images"
   ON storage.objects FOR INSERT
   WITH CHECK (
@@ -137,6 +152,7 @@ CREATE POLICY "Admins can upload business images"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can update business images" ON storage.objects;
 CREATE POLICY "Admins can update business images"
   ON storage.objects FOR UPDATE
   USING (
@@ -147,6 +163,7 @@ CREATE POLICY "Admins can update business images"
     )
   );
 
+DROP POLICY IF EXISTS "Admins can delete business images" ON storage.objects;
 CREATE POLICY "Admins can delete business images"
   ON storage.objects FOR DELETE
   USING (
