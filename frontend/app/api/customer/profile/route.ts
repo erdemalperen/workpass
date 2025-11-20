@@ -10,10 +10,11 @@ export async function GET() {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      // Not logged in - return null profile without error
       return NextResponse.json({
-        success: false,
-        error: 'Unauthorized'
-      }, { status: 401 });
+        success: true,
+        profile: null
+      }, { status: 200 });
     }
 
     // Fetch customer profile
@@ -21,11 +22,23 @@ export async function GET() {
       .from('customer_profiles')
       .select('*')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
+    // If profile doesn't exist, return null (not an error)
     if (profileError) {
       console.error('Error fetching customer profile:', profileError);
-      throw profileError;
+      return NextResponse.json({
+        success: false,
+        error: profileError.message
+      }, { status: 500 });
+    }
+
+    if (!profile) {
+      // Profile doesn't exist yet - this is normal for new users
+      return NextResponse.json({
+        success: true,
+        profile: null
+      }, { status: 200 });
     }
 
     // Get pass statistics

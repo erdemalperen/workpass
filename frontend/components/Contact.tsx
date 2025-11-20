@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
+import {
   ArrowRight,
   Clock,
   ExternalLink,
@@ -14,11 +14,13 @@ import {
   CheckCircle2,
   MapPin,
   RefreshCw,
-  Shield
+  Shield,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { contactData } from "@/lib/mockData/contactData";
+import { getContactInfo, type ContactInfo } from "@/lib/services/settingsService";
 
 // Simple Contact Form Component
 const ContactForm = () => {
@@ -272,7 +274,28 @@ const FAQ = () => {
 
 export default function ContactPage() {
   const [isVisible, setIsVisible] = useState(false);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loading, setLoading] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Load contact information from database
+  useEffect(() => {
+    async function loadContactInfo() {
+      try {
+        setLoading(true);
+        const info = await getContactInfo();
+        setContactInfo(info);
+      } catch (error) {
+        console.error('Error loading contact info:', error);
+        // Fallback to mock data if database fails
+        setContactInfo(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadContactInfo();
+  }, []);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -296,7 +319,100 @@ export default function ContactPage() {
     };
   }, []);
 
+  // Fallback to mock data if contact info not loaded
   const { hero, contactMethods, office, supportStats } = contactData;
+
+  // Use database data if available, otherwise use mock data
+  const displayData = contactInfo ? {
+    hero: {
+      badge: hero.badge,
+      title: hero.title,
+      subtitle: hero.subtitle
+    },
+    contactMethods: [
+      {
+        id: "whatsapp",
+        icon: contactMethods[0].icon,
+        title: "WhatsApp",
+        description: contactInfo.whatsappDescription,
+        value: contactInfo.whatsapp,
+        link: contactInfo.whatsappUrl,
+        availability: contactInfo.whatsappAvailability,
+        color: contactMethods[0].color
+      },
+      {
+        id: "phone",
+        icon: contactMethods[1].icon,
+        title: "Phone",
+        description: contactInfo.phoneDescription,
+        value: contactInfo.phone,
+        link: `tel:${contactInfo.phone.replace(/\s/g, '')}`,
+        availability: contactInfo.phoneAvailability,
+        color: contactMethods[1].color
+      },
+      {
+        id: "email",
+        icon: contactMethods[2].icon,
+        title: "Email",
+        description: contactInfo.emailDescription,
+        value: contactInfo.email,
+        link: `mailto:${contactInfo.email}`,
+        availability: contactInfo.emailResponseTime,
+        color: contactMethods[2].color
+      }
+    ],
+    office: {
+      name: contactInfo.officeName,
+      address: contactInfo.officeAddress,
+      city: contactInfo.officeCity,
+      country: contactInfo.officeCountry,
+      phone: contactInfo.phone,
+      email: contactInfo.email,
+      whatsapp: contactInfo.whatsapp,
+      hours: {
+        weekdays: contactInfo.officeHoursWeekdays,
+        weekend: contactInfo.officeHoursWeekend
+      },
+      coordinates: {
+        lat: parseFloat(contactInfo.officeLatitude),
+        lng: parseFloat(contactInfo.officeLongitude)
+      },
+      image: contactInfo.officeImageUrl
+    },
+    supportStats: [
+      {
+        number: contactInfo.supportResponseTime,
+        label: "Response Time",
+        icon: supportStats[0].icon
+      },
+      {
+        number: contactInfo.supportSatisfactionRate,
+        label: "Satisfaction Rate",
+        icon: supportStats[1].icon
+      },
+      {
+        number: contactInfo.supportHappyCustomers,
+        label: "Happy Customers",
+        icon: supportStats[2].icon
+      },
+      {
+        number: contactInfo.supportWhatsappAvailable,
+        label: "WhatsApp Support",
+        icon: supportStats[3].icon
+      }
+    ]
+  } : { hero, contactMethods, office, supportStats };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading contact information...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="contact-page" className="min-h-screen bg-background">
@@ -306,19 +422,19 @@ export default function ContactPage() {
         <div className="max-w-6xl mx-auto px-4 relative">
           <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-4 bg-primary/10 text-primary border-primary/20">
-              {hero.badge}
+              {displayData.hero.badge}
             </Badge>
             <h1 className={`text-3xl md:text-5xl font-bold mb-4 transition-all duration-700 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-              {hero.title}
+              {displayData.hero.title}
             </h1>
             <p className={`text-lg text-muted-foreground max-w-2xl mx-auto transition-all duration-700 delay-200 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-              {hero.subtitle}
+              {displayData.hero.subtitle}
             </p>
           </div>
 
           {/* Support Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-            {supportStats.map((stat, index) => (
+            {displayData.supportStats.map((stat, index) => (
               <Card key={index} className={`text-center p-4 transition-all duration-700 delay-${300 + index * 100} transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
                 <stat.icon className="h-6 w-6 text-primary mx-auto mb-2" />
                 <div className="text-lg md:text-xl font-bold text-primary">{stat.number}</div>
@@ -338,7 +454,7 @@ export default function ContactPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
-            {contactMethods.map((method) => (
+            {displayData.contactMethods.map((method) => (
               <Card key={method.id} className="hover:shadow-lg transition-all duration-300">
                 <CardContent className="p-6 text-center">
                   <div className={`w-12 h-12 mx-auto rounded-lg bg-gradient-to-br ${method.color} flex items-center justify-center mb-4`}>
@@ -383,7 +499,7 @@ export default function ContactPage() {
             {/* Office Info */}
             <Card>
               <CardContent className="p-6">
-                <h3 className="font-bold text-xl mb-4">{office.name}</h3>
+                <h3 className="font-bold text-xl mb-4">{displayData.office.name}</h3>
                 
                 <div className="space-y-4">
                   <div className="flex items-start gap-3">
@@ -391,8 +507,8 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Address</p>
                       <p className="text-sm text-muted-foreground">
-                        {office.address}<br />
-                        {office.city}, {office.country}
+                        {displayData.office.address}<br />
+                        {displayData.office.city}, {displayData.office.country}
                       </p>
                     </div>
                   </div>
@@ -402,8 +518,8 @@ export default function ContactPage() {
                     <div>
                       <p className="font-medium">Opening Hours</p>
                       <p className="text-sm text-muted-foreground">
-                        {office.hours.weekdays}<br />
-                        {office.hours.weekend}
+                        {displayData.office.hours.weekdays}<br />
+                        {displayData.office.hours.weekend}
                       </p>
                     </div>
                   </div>
@@ -412,11 +528,11 @@ export default function ContactPage() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <p className="font-medium">Phone</p>
-                        <p className="text-muted-foreground">{office.phone}</p>
+                        <p className="text-muted-foreground">{displayData.office.phone}</p>
                       </div>
                       <div>
                         <p className="font-medium">Email</p>
-                        <p className="text-muted-foreground">{office.email}</p>
+                        <p className="text-muted-foreground">{displayData.office.email}</p>
                       </div>
                     </div>
                   </div>
@@ -433,8 +549,8 @@ export default function ContactPage() {
             <Card className="overflow-hidden">
               <div className="relative h-64 lg:h-full min-h-[300px]">
                 <Image
-                  src={office.image}
-                  alt={office.name}
+                  src={displayData.office.image}
+                  alt={displayData.office.name}
                   fill
                   className="object-cover"
                 />

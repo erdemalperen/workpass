@@ -86,7 +86,7 @@ export default function Hero() {
                   ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                   The Smartest Way <br />
                   <span className="text-primary relative inline-block">
-                    To Explore Istanbul
+                    To Explore
                      {/*<svg className="absolute left-0 w-full" viewBox="0 0 200 10" fill="none">
                       <path d="M0,5 C50,5 50,-2 100,5 C150,-2 150,5 200,5" 
                             stroke="currentColor" strokeWidth="2" 

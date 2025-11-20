@@ -6,6 +6,21 @@ export async function POST(request: Request) {
     const supabase = await createServerSupabaseClient();
     const serviceSupabase = createAdminClient();
 
+    // DEBUG: Check what JWT role is being used
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (serviceRoleKey) {
+      try {
+        const base64Url = serviceRoleKey.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        const payload = JSON.parse(jsonPayload);
+        console.log('🔍 Service role JWT payload:', payload);
+        console.log('🔍 JWT role:', payload.role);
+      } catch (e) {
+        console.error('Failed to decode JWT:', e);
+      }
+    }
+
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {

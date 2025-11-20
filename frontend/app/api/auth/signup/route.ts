@@ -202,24 +202,9 @@ export async function POST(request: Request) {
         );
       }
     } else {
-      const { error: profileError } = await supabaseAdmin
-        .from("customer_profiles")
-        .upsert({
-          id: userId,
-          email,
-          first_name: firstName,
-          last_name: lastName,
-          phone: contactPhone,
-          status: "active",
-        });
-
-      if (profileError) {
-        console.error("Signup profile insert error:", profileError);
-        return NextResponse.json(
-          { success: false, error: profileError.message },
-          { status: 500 },
-        );
-      }
+      // Customer profile is automatically created by database trigger
+      // No need to manually insert here
+      // The trigger (handle_new_user) creates the profile when auth.users record is inserted
     }
 
     return NextResponse.json({

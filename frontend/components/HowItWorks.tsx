@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
+import {
   ChevronLeft,
   ChevronRight,
   ArrowRight,
-  ShoppingBag
+  ShoppingBag,
+  Loader2
 } from "lucide-react";
 import { howItWorksData } from "@/lib/mockData/howItWorksData";
+import { getHowItWorksSettings, type HowItWorksSettings } from "@/lib/services/settingsService";
 import Link from "next/link";
 
 export default function HowItWorks() {
@@ -16,9 +18,47 @@ export default function HowItWorks() {
   const [isMounted, setIsMounted] = useState<boolean>(false);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [isSmallScreen, setIsSmallScreen] = useState<boolean>(false);
+  const [settings, setSettings] = useState<HowItWorksSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const stepRefs = useRef<Array<HTMLDivElement | null>>([]);
   const carouselRef = useRef<HTMLDivElement | null>(null);
+
+  // Load How It Works settings from database
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getHowItWorksSettings();
+        setSettings(data);
+      } catch (error) {
+        console.error('Error loading How It Works settings:', error);
+        setSettings(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
+
+  // Merge settings with mock data to create display data
+  const displayData = settings ? {
+    title: settings.heroTitle,
+    subtitle: settings.heroSubtitle,
+    steps: howItWorksData.steps.map((step, index) => ({
+      ...step,
+      title: index === 0 ? settings.step1Title :
+             index === 1 ? settings.step2Title :
+             index === 2 ? settings.step3Title :
+             settings.step4Title,
+      description: index === 0 ? settings.step1Description :
+                   index === 1 ? settings.step2Description :
+                   index === 2 ? settings.step3Description :
+                   settings.step4Description,
+    })),
+    bonusBenefits: howItWorksData.bonusBenefits,
+    decorativeElements: howItWorksData.decorativeElements,
+  } : howItWorksData;
 
   // Set isMounted to true after component mounts
   useEffect(() => {
@@ -58,7 +98,7 @@ export default function HowItWorks() {
     let interval: NodeJS.Timeout | undefined;
     if (isSmallScreen) {
       interval = setInterval(() => {
-        setActiveStep((prev) => (prev + 1) % howItWorksData.steps.length);
+        setActiveStep((prev) => (prev + 1) % displayData.steps.length);
       }, 5000);
     }
 
@@ -70,19 +110,19 @@ export default function HowItWorks() {
         clearInterval(interval);
       }
     };
-  }, [isMounted, isSmallScreen]);
+  }, [isMounted, isSmallScreen, displayData.steps.length]);
 
   // Navigate to previous step
   const prevStep = () => {
-    setActiveStep((prev) => 
-      prev === 0 ? howItWorksData.steps.length - 1 : prev - 1
+    setActiveStep((prev) =>
+      prev === 0 ? displayData.steps.length - 1 : prev - 1
     );
   };
 
   // Navigate to next step
   const nextStep = () => {
-    setActiveStep((prev) => 
-      (prev + 1) % howItWorksData.steps.length
+    setActiveStep((prev) =>
+      (prev + 1) % displayData.steps.length
     );
   };
 
@@ -124,7 +164,7 @@ export default function HowItWorks() {
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
           <div className="absolute inset-0">
-            {howItWorksData.decorativeElements.map((elem, i) => (
+            {displayData.decorativeElements.map((elem, i) => (
               <div
                 key={i}
                 className="absolute animate-pulse-slow"
@@ -166,11 +206,11 @@ export default function HowItWorks() {
           </div>
           <h2 className={`text-3xl md:text-4xl font-bold transition-all duration-700 transform
             ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            {howItWorksData.title}
+            {displayData.title}
           </h2>
           <p className={`mt-4 text-muted-foreground max-w-2xl mx-auto transition-all duration-700 delay-100 transform
             ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-            {howItWorksData.subtitle}
+            {displayData.subtitle}
           </p>
         </div>
 
@@ -184,11 +224,11 @@ export default function HowItWorks() {
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
             >
-              <div 
-                className="flex transition-transform duration-500 ease-out" 
+              <div
+                className="flex transition-transform duration-500 ease-out"
                 style={{ transform: `translateX(-${activeStep * 100}%)` }}
               >
-                {howItWorksData.steps.map((step, index) => (
+                {displayData.steps.map((step, index) => (
                   <div key={index} className="w-full flex-shrink-0 px-4">
                     <Card className="relative h-full overflow-hidden border-0 shadow-lg">
                       {/* Card Background */}
@@ -239,7 +279,7 @@ export default function HowItWorks() {
               
               {/* Carousel Indicators */}
               <div className="flex justify-center space-x-2">
-                {howItWorksData.steps.map((_, index) => (
+                {displayData.steps.map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setActiveStep(index)}
@@ -265,7 +305,7 @@ export default function HowItWorks() {
         {/* Desktop View */}
         {!isSmallScreen && (
           <div className="grid md:grid-cols-4 gap-6 lg:gap-8">
-            {howItWorksData.steps.map((step, index) => (
+            {displayData.steps.map((step, index) => (
               <div
                 key={index}
                 ref={(el) => addToRefs(el, index)}

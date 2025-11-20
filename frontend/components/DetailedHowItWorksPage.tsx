@@ -4,23 +4,25 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
+import {
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
   RotateCcw,
   Download,
   Share2,
   CheckCircle2,
   ArrowRight,
   ShoppingBag,
-  Users
+  Users,
+  Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { howItWorksData } from "@/lib/mockData/howItWorksData";
-import { faqData } from "@/lib/mockData/faqData"; // Mevcut FAQ verisini import ediyoruz
+import { faqData } from "@/lib/mockData/faqData";
+import { getHowItWorksSettings, type HowItWorksSettings } from "@/lib/services/settingsService";
 
 // Video component
 const VideoPlayer = ({ src, poster, title }: { src: string; poster: string; title: string }) => {
@@ -138,7 +140,26 @@ export default function DetailedHowItWorksPage() {
   const [isVisible, setIsVisible] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("general");
+  const [settings, setSettings] = useState<HowItWorksSettings | null>(null);
+  const [loading, setLoading] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // Load How It Works settings from database
+  useEffect(() => {
+    async function loadSettings() {
+      try {
+        const data = await getHowItWorksSettings();
+        setSettings(data);
+      } catch (error) {
+        console.error('Error loading How It Works settings:', error);
+        setSettings(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadSettings();
+  }, []);
 
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
@@ -162,9 +183,102 @@ export default function DetailedHowItWorksPage() {
     };
   }, []);
 
-  // Mock data'dan gerekli verileri al
-  const detailedPage = howItWorksData.detailedPage!;
-  const { steps } = howItWorksData;
+  // Merge settings with mock data to create display data
+  const displayData = settings ? {
+    detailedPage: {
+      ...howItWorksData.detailedPage!,
+      heroTitle: settings.detailedTitle,
+      heroSubtitle: settings.detailedSubtitle,
+      overviewVideo: {
+        src: settings.overviewVideoUrl,
+        poster: settings.overviewVideoPoster,
+        title: settings.overviewVideoTitle,
+      },
+      quickStats: [
+        {
+          ...howItWorksData.detailedPage!.quickStats[0],
+          number: settings.statLocations,
+          label: settings.statLocationsLabel,
+        },
+        {
+          ...howItWorksData.detailedPage!.quickStats[1],
+          number: settings.statCustomers,
+          label: settings.statCustomersLabel,
+        },
+        {
+          ...howItWorksData.detailedPage!.quickStats[2],
+          number: settings.statSavings,
+          label: settings.statSavingsLabel,
+        },
+        {
+          ...howItWorksData.detailedPage!.quickStats[3],
+          number: settings.statRating,
+          label: settings.statRatingLabel,
+        },
+      ],
+      benefits: [
+        {
+          ...howItWorksData.detailedPage!.benefits[0],
+          title: settings.benefit1Title,
+          description: settings.benefit1Description,
+        },
+        {
+          ...howItWorksData.detailedPage!.benefits[1],
+          title: settings.benefit2Title,
+          description: settings.benefit2Description,
+        },
+        {
+          ...howItWorksData.detailedPage!.benefits[2],
+          title: settings.benefit3Title,
+          description: settings.benefit3Description,
+        },
+        {
+          ...howItWorksData.detailedPage!.benefits[3],
+          title: settings.benefit4Title,
+          description: settings.benefit4Description,
+        },
+      ],
+      cta: {
+        title: settings.ctaTitle,
+        subtitle: settings.ctaSubtitle,
+        primaryButton: settings.ctaButton1Text,
+        secondaryButton: settings.ctaButton2Text,
+      },
+    },
+    steps: howItWorksData.steps.map((step, index) => ({
+      ...step,
+      title: index === 0 ? settings.step1Title :
+             index === 1 ? settings.step2Title :
+             index === 2 ? settings.step3Title :
+             settings.step4Title,
+      description: index === 0 ? settings.step1Description :
+                   index === 1 ? settings.step2Description :
+                   index === 2 ? settings.step3Description :
+                   settings.step4Description,
+      videoSrc: index === 0 ? settings.step1VideoUrl :
+                index === 1 ? settings.step2VideoUrl :
+                index === 2 ? settings.step3VideoUrl :
+                settings.step4VideoUrl,
+      videoPoster: index === 0 ? settings.step1VideoPoster :
+                   index === 1 ? settings.step2VideoPoster :
+                   index === 2 ? settings.step3VideoPoster :
+                   settings.step4VideoPoster,
+    })),
+  } : {
+    detailedPage: howItWorksData.detailedPage!,
+    steps: howItWorksData.steps,
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading How It Works page...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div id="detailed-how-it-works" className="min-h-screen bg-background">
@@ -177,25 +291,25 @@ export default function DetailedHowItWorksPage() {
               Step by Step Guide
             </Badge>
             <h1 className={`text-4xl md:text-6xl font-bold mb-6 transition-all duration-700 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-              {detailedPage.heroTitle.split(' ')[0]} <span className="text-primary">{detailedPage.heroTitle.split(' ').slice(1).join(' ')}</span>
+              {displayData.detailedPage.heroTitle.split(' ')[0]} <span className="text-primary">{displayData.detailedPage.heroTitle.split(' ').slice(1).join(' ')}</span>
             </h1>
             <p className={`text-xl text-muted-foreground max-w-3xl mx-auto transition-all duration-700 delay-200 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-              {detailedPage.heroSubtitle}
+              {displayData.detailedPage.heroSubtitle}
             </p>
           </div>
 
           {/* Overview Video */}
           <div className={`max-w-4xl mx-auto mb-20 transition-all duration-700 delay-400 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
-            <VideoPlayer 
-              src={detailedPage.overviewVideo.src}
-              poster={detailedPage.overviewVideo.poster}
-              title={detailedPage.overviewVideo.title}
+            <VideoPlayer
+              src={displayData.detailedPage.overviewVideo.src}
+              poster={displayData.detailedPage.overviewVideo.poster}
+              title={displayData.detailedPage.overviewVideo.title}
             />
           </div>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-20">
-            {detailedPage.quickStats.map((stat, index) => (
+            {displayData.detailedPage.quickStats.map((stat, index) => (
               <Card key={index} className={`text-center p-6 transition-all duration-700 delay-${600 + index * 100} transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
                 <stat.icon className="h-8 w-8 text-primary mx-auto mb-2" />
                 <div className="text-2xl font-bold text-primary">{stat.number}</div>
@@ -215,7 +329,7 @@ export default function DetailedHowItWorksPage() {
           </div>
 
           <div className="space-y-24">
-            {steps.map((step, index) => (
+            {displayData.steps.map((step, index) => (
               <div key={index} className={`grid md:grid-cols-2 gap-12 items-center ${index % 2 === 1 ? 'md:flex-row-reverse' : ''}`}>
                 
                 {/* Content */}
@@ -303,7 +417,7 @@ export default function DetailedHowItWorksPage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {detailedPage.benefits.map((benefit, index) => (
+            {displayData.detailedPage.benefits.map((benefit, index) => (
               <Card key={index} className="text-center p-6 hover:shadow-lg transition-all duration-300">
                 <benefit.icon className="h-12 w-12 text-primary mx-auto mb-4" />
                 <h3 className="font-semibold mb-2">{benefit.title}</h3>
@@ -367,20 +481,20 @@ export default function DetailedHowItWorksPage() {
       {/* CTA */}
       <section className="py-20 bg-primary/5">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">{detailedPage.cta.title}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">{displayData.detailedPage.cta.title}</h2>
           <p className="text-lg text-muted-foreground mb-8">
-            {detailedPage.cta.subtitle}
+            {displayData.detailedPage.cta.subtitle}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/#passes-section">
               <Button size="lg" className="bg-primary hover:bg-primary/90">
                 <ShoppingBag className="h-5 w-5 mr-2" />
-                {detailedPage.cta.primaryButton}
+                {displayData.detailedPage.cta.primaryButton}
               </Button>
             </Link>
             <Button size="lg" variant="outline">
               <Users className="h-5 w-5 mr-2" />
-              {detailedPage.cta.secondaryButton}
+              {displayData.detailedPage.cta.secondaryButton}
             </Button>
           </div>
         </div>
