@@ -14,59 +14,21 @@ import {
   AlertCircle,
   CheckCircle,
   Ticket,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
-
-interface Message {
-  id: string;
-  type: "notification" | "offer" | "alert" | "success";
-  title: string;
-  content: string;
-  date: string;
-  read: boolean;
-}
+import { getUserMessages, markMessageAsRead, type Message } from "@/lib/services/messageService";
 
 export default function MessagesPage() {
   const router = useRouter();
   const supabase = createClient();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      type: "success",
-      title: "Pass Activated Successfully",
-      content: "Your Istanbul Welcome Pass is now active and ready to use at all partner locations.",
-      date: "2024-01-15",
-      read: false
-    },
-    {
-      id: "2",
-      type: "offer",
-      title: "Special Offer: 25% Off Food Pass",
-      content: "Upgrade to our Food & Beverage Pass and get 25% off. Limited time offer!",
-      date: "2024-01-14",
-      read: false
-    },
-    {
-      id: "3",
-      type: "notification",
-      title: "New Partner Added",
-      content: "Check out our newest partner: Galata Tower. Now accepting TuristPass!",
-      date: "2024-01-12",
-      read: true
-    },
-    {
-      id: "4",
-      type: "alert",
-      title: "Pass Expiring Soon",
-      content: "Your Food & Beverage Pass will expire on June 30, 2025. Renew now to continue enjoying benefits.",
-      date: "2024-01-10",
-      read: true
-    }
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [messages, setMessages] = useState<Message[]>([]);
 
+  // Check authentication
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -87,6 +49,32 @@ export default function MessagesPage() {
       mounted = false;
     };
   }, [router, supabase]);
+
+  // Fetch messages from database
+  useEffect(() => {
+    if (!isAuthed) return;
+
+    let mounted = true;
+    (async () => {
+      setIsLoading(true);
+      try {
+        const fetchedMessages = await getUserMessages();
+        if (mounted) {
+          setMessages(fetchedMessages);
+        }
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isAuthed]);
 
   if (isChecking || !isAuthed) {
     return (
@@ -122,10 +110,18 @@ export default function MessagesPage() {
     }
   };
 
-  const markAsRead = (messageId: string) => {
+  const handleMarkAsRead = async (messageId: string) => {
+    // Optimistically update UI
     setMessages(messages.map(msg =>
       msg.id === messageId ? { ...msg, read: true } : msg
     ));
+
+    // Update in database
+    const success = await markMessageAsRead(messageId);
+    if (!success) {
+      console.error('Failed to mark message as read in database');
+      // Optionally revert the optimistic update
+    }
   };
 
   const unreadCount = messages.filter(m => !m.read).length;
@@ -150,7 +146,17 @@ export default function MessagesPage() {
           )}
         </div>
 
-        {messages.length === 0 ? (
+        {isLoading ? (
+          <Card className="text-center py-12">
+            <CardContent>
+              <Loader2 className="h-16 w-16 mx-auto text-primary mb-4 animate-spin" />
+              <h3 className="text-xl font-semibold mb-2">Loading Messages</h3>
+              <p className="text-muted-foreground">
+                Please wait while we fetch your messages...
+              </p>
+            </CardContent>
+          </Card>
+        ) : messages.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
               <MessageSquare className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -170,7 +176,7 @@ export default function MessagesPage() {
                 <Card
                   key={message.id}
                   className={`${!message.read ? 'border-primary/50 shadow-md' : ''} hover:shadow-lg transition-shadow cursor-pointer`}
-                  onClick={() => !message.read && markAsRead(message.id)}
+                  onClick={() => !message.read && handleMarkAsRead(message.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-4">

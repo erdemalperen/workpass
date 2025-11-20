@@ -9,9 +9,10 @@ import Link from "next/link";
 import { Star, Clock, MapPin, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { placeCategories } from "@/lib/mockData/placesData";
 import { getAllBusinessesForPlaces, type Business } from "@/lib/services/businessService";
+import { getActivePasses, type Pass } from "@/lib/services/passService";
 
 // Helper function to convert Business to Place format
-function convertBusinessToPlace(business: Business) {
+function convertBusinessToPlace(business: Business, passIds: string[] = []) {
   // Try to get images from business_accounts metadata first, then fallback to gallery_images or image_url
   // Priority: 1. metadata images 2. gallery_images 3. image_url 4. placeholder
   const metadataImages = business.business_accounts?.[0]?.metadata?.profile?.images || [];
@@ -30,7 +31,7 @@ function convertBusinessToPlace(business: Business) {
     rating: 4.5,
     reviewCount: 0,
     categoryId: business.category.toLowerCase().replace(/ & /g, '-').replace(/ /g, '-'),
-    passIds: [],
+    passIds: passIds,
     images: [
       {
         id: '1',
@@ -65,9 +66,11 @@ function convertBusinessToPlace(business: Business) {
 
 export default function PopularPlaces() {
   const [isVisible, setIsVisible] = useState(false);
+  const [activePass, setActivePass] = useState("all");
   const [activeCategory, setActiveCategory] = useState("all");
   const [visiblePlaces, setVisiblePlaces] = useState(8);
   const [places, setPlaces] = useState<any[]>([]);
+  const [passes, setPasses] = useState<Pass[]>([]);
   const [loading, setLoading] = useState(true);
   const categoryContainerRef = useRef<HTMLDivElement>(null);
 
@@ -76,22 +79,44 @@ export default function PopularPlaces() {
   const [containerWidth, setContainerWidth] = useState(0);
   const [needsControls, setNeedsControls] = useState(false);
 
-  // Fetch businesses from database and convert to Place format
+  // Fetch passes and businesses from database
   useEffect(() => {
-    async function loadPlaces() {
+    async function loadData() {
       try {
         setLoading(true);
+
+        // Fetch passes with their businesses
+        const activePasses = await getActivePasses();
+        setPasses(activePasses);
+
+        // Fetch all businesses
         const businesses = await getAllBusinessesForPlaces();
-        const convertedPlaces = businesses.map(convertBusinessToPlace);
+
+        // Create a map of business_id -> pass_ids
+        const businessPassMap = new Map<string, string[]>();
+        activePasses.forEach(pass => {
+          pass.businesses?.forEach(pb => {
+            const passIds = businessPassMap.get(pb.business_id) || [];
+            passIds.push(pass.id);
+            businessPassMap.set(pb.business_id, passIds);
+          });
+        });
+
+        // Convert businesses to places with their pass associations
+        const convertedPlaces = businesses.map(business => {
+          const passIds = businessPassMap.get(business.id) || [];
+          return convertBusinessToPlace(business, passIds);
+        });
+
         setPlaces(convertedPlaces);
       } catch (error) {
-        console.error('Error loading places:', error);
+        console.error('Error loading data:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadPlaces();
+    loadData();
   }, []);
 
   useEffect(() => {
@@ -146,10 +171,16 @@ export default function PopularPlaces() {
     };
   }, []);
 
-  // Filter places based on active category
-  const filteredPlaces = activeCategory === "all"
-    ? places
-    : places.filter(place => place.categoryId === activeCategory);
+  // Filter places based on active pass and category
+  const filteredPlaces = places.filter(place => {
+    // Filter by pass
+    const passMatch = activePass === "all" || place.passIds.includes(activePass);
+
+    // Filter by category
+    const categoryMatch = activeCategory === "all" || place.categoryId === activeCategory;
+
+    return passMatch && categoryMatch;
+  });
 
   // Show more places
   const handleShowMore = () => {
@@ -177,14 +208,59 @@ export default function PopularPlaces() {
             className={`text-xl md:text-2xl lg:text-3xl font-bold transition-all duration-700 transform
               ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
           >
-            Popular Places
+            Places Worth Discovering
           </h2>
           <p
             className={`mt-2 text-muted-foreground text-xs md:text-sm transition-all duration-700 delay-100 transform
               ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
           >
-            Best places to visit with Pass
+            Explore the best restaurants, cafes, spas, and activities in Istanbul
           </p>
+        </div>
+
+        {/* Pass Selection */}
+        <div className={`mb-8 transition-all duration-700 delay-150 transform
+          ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+          <div className="flex justify-center items-center gap-3 flex-wrap">
+            <button
+              onClick={() => {
+                setActivePass("all");
+                setActiveCategory("all");
+                setVisiblePlaces(8);
+              }}
+              className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                activePass === "all"
+                  ? 'bg-primary text-primary-foreground shadow-md'
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+            >
+              All Places
+            </button>
+            {passes.map((pass) => (
+              <button
+                key={pass.id}
+                onClick={() => {
+                  setActivePass(pass.id);
+                  setActiveCategory("all");
+                  setVisiblePlaces(8);
+                }}
+                className={`px-6 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${
+                  activePass === pass.id
+                    ? 'bg-primary text-primary-foreground shadow-md'
+                    : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                }`}
+              >
+                {pass.name}
+              </button>
+            ))}
+          </div>
+
+          {/* Places Found Counter */}
+          <div className="text-center mt-4">
+            <p className="text-sm text-muted-foreground">
+              Showing {Math.min(visiblePlaces, filteredPlaces.length)} of {filteredPlaces.length} places found
+            </p>
+          </div>
         </div>
 
         {/* Category Selection */}

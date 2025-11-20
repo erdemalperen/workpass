@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { ArrowRight, Code, Sparkles, Check } from "lucide-react";
+import { ArrowRight, Code, Sparkles, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { footerData } from "@/lib/mockData/footerData";
+import { getContactInfo, type ContactInfo } from "@/lib/services/settingsService";
 
 export default function Footer() {
   const [isVisible, setIsVisible] = useState(false);
@@ -13,6 +14,25 @@ export default function Footer() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [year, setYear] = useState(2024);
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Load contact information from database
+  useEffect(() => {
+    async function loadContactInfo() {
+      try {
+        const info = await getContactInfo();
+        setContactInfo(info);
+      } catch (error) {
+        console.error('Error loading contact info for footer:', error);
+        setContactInfo(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadContactInfo();
+  }, []);
 
   useEffect(() => {
     setYear(new Date().getFullYear());
@@ -79,10 +99,10 @@ export default function Footer() {
             <div className={`transition-all duration-700 transform
               ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
               <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 text-white">
-                {footerData.newsletterInfo.title}
+                {contactInfo?.newsletterTitle || footerData.newsletterInfo.title}
               </h3>
               <p className="text-lg text-primary-foreground/90 leading-relaxed">
-                {footerData.newsletterInfo.description}
+                {contactInfo?.newsletterDescription || footerData.newsletterInfo.description}
               </p>
             </div>
             
@@ -173,23 +193,23 @@ export default function Footer() {
             <div className={`lg:col-span-2 transition-all duration-700 delay-200 transform
               ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
               <Link href="/" className="inline-block">
-                <h3 className="text-2xl font-bold text-primary">{footerData.brandInfo.name}</h3>
+                <h3 className="text-2xl font-bold text-primary">{contactInfo?.siteName || footerData.brandInfo.name}</h3>
               </Link>
               <p className="mt-4 text-muted-foreground max-w-sm leading-relaxed">
-                {footerData.brandInfo.description}
+                {contactInfo?.brandDescription || footerData.brandInfo.description}
               </p>
               <div className="mt-6 space-y-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-3">
                   <footerData.contactInfo.location.icon className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>{footerData.contactInfo.location.text}</span>
+                  <span>{contactInfo ? `${contactInfo.officeCity}, ${contactInfo.officeCountry}` : footerData.contactInfo.location.text}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <footerData.contactInfo.email.icon className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>{footerData.contactInfo.email.text}</span>
+                  <span>{contactInfo?.email || footerData.contactInfo.email.text}</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <footerData.contactInfo.phone.icon className="h-5 w-5 text-primary flex-shrink-0" />
-                  <span>{footerData.contactInfo.phone.text}</span>
+                  <span>{contactInfo?.phone || footerData.contactInfo.phone.text}</span>
                 </div>
               </div>
             </div>
@@ -252,7 +272,7 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-sm text-muted-foreground">
-              © {year} {footerData.brandInfo.name}. All rights reserved.
+              © {year} {contactInfo?.siteName || footerData.brandInfo.name}. All rights reserved.
             </div>
             
             {/* Botanozalp.com Signature */}
