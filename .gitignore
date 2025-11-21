@@ -18,7 +18,11 @@
 # misc
 .DS_Store
 *.pem
+# Markdown dosyalarını yoksay
+*.md
 
+# Text dosyalarını yoksay
+*.txt
 # debug
 npm-debug.log*
 yarn-debug.log*
