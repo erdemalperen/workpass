@@ -23,6 +23,7 @@ import {
   Menu,
   X,
   Star,
+  Lock,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -320,6 +321,8 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
   const business = state.business;
   const venueName = business.name ?? state.account.business_name ?? "My Venue";
   const venueDistrict = business.district ?? business.city ?? "—";
+  const isPending = (business.status ?? "").toLowerCase() === "pending";
+  const pendingAllowed = new Set(["My Venue", "Reviews", "Support"]);
 
   const navigation = [
     { name: "Dashboard", href: "/business/dashboard", icon: LayoutDashboard },
@@ -331,6 +334,44 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
   ];
   const notifications = notificationsState.items;
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const renderNavItem = (item: (typeof navigation)[number], opts?: { onClick?: () => void }) => {
+    const isActive = pathname === item.href;
+    const restricted = isPending && !pendingAllowed.has(item.name);
+    const baseClasses = `group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
+      isActive
+        ? "bg-primary text-white"
+        : "text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800"
+    }`;
+
+    if (restricted) {
+      return (
+        <div
+          key={item.name}
+          className={`${baseClasses} opacity-60 cursor-not-allowed`}
+          aria-disabled
+          title="Bu menü işletme onaylandıktan sonra açılır"
+        >
+          <item.icon className="h-5 w-5 shrink-0" />
+          <span className="flex-1">{item.name}</span>
+          <Lock className="h-4 w-4 shrink-0" />
+        </div>
+      );
+    }
+
+    return (
+      <Link
+        key={item.name}
+        href={item.href}
+        prefetch
+        onClick={opts?.onClick}
+        className={baseClasses}
+      >
+        <item.icon className="h-5 w-5 shrink-0" />
+        {item.name}
+      </Link>
+    );
+  };
 
   return (
     <BusinessContext.Provider value={contextValue}>
@@ -361,25 +402,9 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
               <ul role="list" className="flex flex-1 flex-col gap-y-7">
                 <li>
                   <ul role="list" className="-mx-2 space-y-1">
-                    {navigation.map((item) => {
-                      const isActive = pathname === item.href;
-                      return (
-                        <li key={item.name}>
-                          <Link
-                            href={item.href}
-                            prefetch
-                            className={`group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold ${
-                              isActive
-                                ? "bg-primary text-white"
-                                : "text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800"
-                            }`}
-                          >
-                            <item.icon className="h-5 w-5 shrink-0" />
-                            {item.name}
-                          </Link>
-                        </li>
-                      );
-                    })}
+                    {navigation.map((item) => (
+                      <li key={item.name}>{renderNavItem(item)}</li>
+                    ))}
                   </ul>
                 </li>
                 <li className="mt-auto">
@@ -512,24 +537,9 @@ export default function BusinessLayout({ children }: BusinessLayoutProps) {
                 </Button>
               </div>
               <nav className="px-4 py-6 space-y-4">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href;
-                  return (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      onClick={() => setIsSidebarOpen(false)}
-                      className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold ${
-                        isActive
-                          ? "bg-primary text-white"
-                          : "text-gray-700 dark:text-gray-300 hover:text-primary hover:bg-gray-50 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.name}
-                    </Link>
-                  );
-                })}
+                {navigation.map((item) => (
+                  <div key={item.name}>{renderNavItem(item, { onClick: () => setIsSidebarOpen(false) })}</div>
+                ))}
                 <Button
                   variant="outline"
                   className="w-full mt-6 justify-start gap-2"

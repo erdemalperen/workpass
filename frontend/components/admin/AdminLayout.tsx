@@ -36,7 +36,9 @@ import {
   AlertCircle,
   CheckCircle,
   Info,
-  AlertTriangle
+  AlertTriangle,
+  Megaphone,
+  Tag
 } from "lucide-react";
 
 type Notification = {
@@ -165,12 +167,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Businesses", href: "/admin/businesses", icon: Building2, permission: "businesses" as const },
     { name: "Passes", href: "/admin/passes", icon: CreditCard, permission: "passes" as const },
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart, permission: "orders" as const },
+    { name: "Campaigns & Codes", href: "/admin/campaigns", icon: Megaphone, permission: "settings" as const },
     { name: "Announcements", href: "/admin/messages", icon: MessageSquare, permission: "settings" as const },
     { name: "Support", href: "/admin/support", icon: Bell, permission: "support" as const },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3, permission: "analytics" as const },
     { name: "Settings", href: "/admin/settings", icon: Settings, permission: "settings" as const },
     { name: "Contact Settings", href: "/admin/contact-settings", icon: MapPin, permission: "settings" as const },
-    { name: "How It Works", href: "/admin/how-it-works-settings", icon: Shield, permission: "settings" as const },
+    { name: "Content", href: "/admin/content", icon: Shield, permission: "settings" as const },
   ];
 
   const filteredNavigation = navigation.filter(item => {

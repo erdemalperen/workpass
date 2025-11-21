@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 /**
@@ -48,18 +49,31 @@ export async function createClient() {
  * - System-level operations
  */
 export function createAdminClient() {
-  return createServerClient(
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  // Debug: Log if service role key is missing
+  if (!serviceRoleKey) {
+    console.error('❌ CRITICAL: SUPABASE_SERVICE_ROLE_KEY is not set!');
+    console.error('This will cause permission denied errors.');
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
+  }
+
+  if (serviceRoleKey.length < 100) {
+    console.warn('⚠️  WARNING: SUPABASE_SERVICE_ROLE_KEY looks too short:', serviceRoleKey.length, 'chars');
+  }
+
+  console.log('✅ Creating admin client with service role key (length:', serviceRoleKey.length, ')');
+
+  // Use the standard Supabase client (not SSR) with service role key
+  // This properly sets the Authorization header with service_role JWT
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    serviceRoleKey,
     {
-      cookies: {
-        getAll() {
-          return []
-        },
-        setAll() {
-          // Not needed for service role client
-        },
-      },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
     }
   )
 }

@@ -499,7 +499,7 @@ export async function getHowItWorksSettings(): Promise<HowItWorksSettings> {
 
   return {
     // Hero
-    heroTitle: settings['howitworks_hero_title'] || 'How123 Does the Istanbul Shopping & Food Pass Work?',
+    heroTitle: settings['howitworks_hero_title'] || 'How Does Shopping & Food Pass Work?',
     heroSubtitle: settings['howitworks_hero_subtitle'] || 'Get exclusive discounts at 40+ handpicked locations across Istanbul with just one pass',
     detailedTitle: settings['howitworks_detailed_title'] || 'How Does It Work?',
     detailedSubtitle: settings['howitworks_detailed_subtitle'] || 'Discover Istanbul with TuristPass in just 4 steps! Get instant access to 70+ premium locations and start saving today.',

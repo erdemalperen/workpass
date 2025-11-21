@@ -226,7 +226,8 @@ export default function PopularPasses() {
           children: selection.children,
           adultPrice: selectedOption.adultPrice,
           childPrice: selectedOption.childPrice,
-          discount: selectedPassData.discount
+          discount: selectedPassData.discount,
+          discountCode: selection.discountCode || null,
         }),
       });
 

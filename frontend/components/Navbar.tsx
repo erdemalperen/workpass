@@ -230,32 +230,20 @@ export default function Navbar() {
               onLogout={handleLogout}
             />
           ) : (
-            <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Log In
-                    <ChevronDown className="h-4 w-4 ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/login" className="cursor-pointer">Customer Login</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/business/login" className="cursor-pointer">Business Login</Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
+            <div className="flex items-center gap-3">
+              <Link href="/login">
+                <Button variant="outline" size="sm" className="text-primary border-primary hover:bg-primary hover:text-primary-foreground gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Log In
+                </Button>
+              </Link>
               <Link href="/signup">
                 <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Sign Up
                 </Button>
               </Link>
-            </>
+            </div>
           )}
         </div>
 

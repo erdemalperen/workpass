@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { passId, passName, days, adults, children, adultPrice, childPrice, discount } = body;
+    const { passId, passName, days, adults, children, adultPrice, childPrice, discount, discountCode } = body;
 
     const adultCount = Number(adults) || 0;
     const childCount = Number(children) || 0;
@@ -55,7 +55,38 @@ export async function POST(request: Request) {
     const adultTotal = adultCount * adultUnitPrice;
     const childTotal = childCount * childUnitPrice;
     const subtotal = adultTotal + childTotal;
-    const discountAmount = subtotal > 0 ? (subtotal * discountPercentage) / 100 : 0;
+
+    // Calculate discount (either from pass discount or discount code)
+    let discountAmount = subtotal > 0 ? (subtotal * discountPercentage) / 100 : 0;
+    let discountCodeId = null;
+    let appliedDiscountCode = null;
+
+    // If discount code is provided, validate and apply it
+    if (discountCode && discountCode.trim()) {
+      try {
+        const { data: validationResult, error: validationError } = await serviceSupabase
+          .rpc('validate_discount_code', {
+            p_code: discountCode.trim(),
+            p_customer_id: user.id,
+            p_subtotal: subtotal,
+            p_pass_id: passId || null,
+          });
+
+        if (!validationError && validationResult && validationResult.length > 0) {
+          const result = validationResult[0];
+          if (result.is_valid) {
+            // Apply discount code (replaces any pass discount)
+            discountAmount = Number(result.discount_amount) || 0;
+            discountCodeId = result.discount_code_id;
+            appliedDiscountCode = discountCode.trim().toUpperCase();
+          }
+        }
+      } catch (codeError) {
+        console.error('Error validating discount code:', codeError);
+        // Continue without discount code if validation fails
+      }
+    }
+
     const totalAmount = Math.max(subtotal - discountAmount, 0);
 
     // Generate order number
@@ -173,8 +204,31 @@ export async function POST(request: Request) {
       }
     }
 
+    // Record discount code usage if applicable
+    if (discountCodeId && appliedDiscountCode) {
+      try {
+        await serviceSupabase
+          .from('discount_code_usage')
+          .insert({
+            discount_code_id: discountCodeId,
+            customer_id: user.id,
+            order_id: order.id,
+            code_used: appliedDiscountCode,
+            discount_amount: discountAmount,
+            order_subtotal: subtotal,
+            order_total: totalAmount,
+          });
+      } catch (usageError) {
+        console.error('Error recording discount code usage:', usageError);
+        // Don't fail the order if this fails
+      }
+    }
+
     console.log('Order created successfully:', order.id, orderNumber);
     console.log('Created', purchasedPasses.length, 'purchased passes');
+    if (appliedDiscountCode) {
+      console.log('Applied discount code:', appliedDiscountCode, 'Amount:', discountAmount);
+    }
 
     return NextResponse.json({
       success: true,
@@ -186,6 +240,7 @@ export async function POST(request: Request) {
         totalAmount,
         subtotal,
         discountAmount,
+        discountCode: appliedDiscountCode,
         items: {
           adults: adultCount,
           children: childCount,

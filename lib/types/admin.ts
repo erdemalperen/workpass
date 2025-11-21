@@ -14,6 +14,7 @@ export interface Admin {
     support: boolean;
     settings: boolean;
     analytics: boolean;
+    content: boolean;
   };
 }
 

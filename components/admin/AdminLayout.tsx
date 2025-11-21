@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard,
   Users,
@@ -30,7 +31,10 @@ import {
   Menu,
   Shield,
   Bell,
-  BarChart3
+  BarChart3,
+  HelpCircle,
+  FileText,
+  Star
 } from "lucide-react";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -130,6 +134,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Orders", href: "/admin/orders", icon: ShoppingCart, permission: "orders" as const },
     { name: "Support", href: "/admin/support", icon: MessageSquare, permission: "support" as const },
     { name: "Analytics", href: "/admin/analytics", icon: BarChart3, permission: "analytics" as const },
+    { name: "FAQ", href: "/admin/content/faq", icon: HelpCircle, permission: "content" as const },
+    { name: "How It Works", href: "/admin/content/how-it-works", icon: FileText, permission: "content" as const },
+    { name: "Why Choose Us", href: "/admin/content/why-choose-us", icon: Star, permission: "content" as const },
     { name: "Settings", href: "/admin/settings", icon: Settings, permission: "settings" as const },
   ];
 
@@ -172,11 +179,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             href={item.href}
             onClick={closeMobile}
             prefetch={true}
-            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
+            className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${isActive
+              ? 'bg-primary text-primary-foreground'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
           >
             <item.icon className="h-5 w-5" />
             {item.name}

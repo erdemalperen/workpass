@@ -268,18 +268,31 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link href="/signup" className="text-primary hover:underline">
-                  Sign up
-                </Link>
-              </div>
+              <div className="text-center text-sm text-muted-foreground space-y-2">
+                <div>
+                  Don&apos;t have an account?{" "}
+                  <Link href="/signup" className="text-primary hover:underline">
+                    Sign up
+                  </Link>
+                </div>
+                <div className="text-xs">
+                  İşletme hesabı için{" "}
+                  <Link href="/business/login" className="text-primary hover:underline font-medium">
+                    işletme girişi
+                  </Link>{" "}
+                  veya{" "}
+                  <Link href="/business/apply" className="text-primary hover:underline font-medium">
+                    işletme kaydı
+                  </Link>
+                  .
+                </div>
 
-              <div className="text-xs text-muted-foreground text-center space-y-1">
-                <p>Demo access:</p>
-                <p>
-                  Email: demo@turistpass.com • Password: Demo123!
-                </p>
+                <div className="text-xs text-muted-foreground text-center space-y-1 pt-1">
+                  <p>Demo access:</p>
+                  <p>
+                    Email: demo@turistpass.com • Password: Demo123!
+                  </p>
+                </div>
               </div>
             </CardContent>
           </Card>

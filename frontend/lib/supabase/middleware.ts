@@ -39,8 +39,15 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired - required for Server Components
-  await supabase.auth.getUser()
+  // If there is no Supabase auth cookie, avoid calling the auth API to prevent slow/failed requests
+  const hasAuthCookie = request.cookies.getAll().some(({ name }) =>
+    name.startsWith('sb-') || name === 'supabase-auth-token' || name === 'supabaseRefreshToken'
+  )
+
+  if (hasAuthCookie) {
+    // Refresh session if expired - required for Server Components
+    await supabase.auth.getUser()
+  }
 
   return response
 }

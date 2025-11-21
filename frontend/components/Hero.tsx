@@ -2,40 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Compass, Star, Clock, Ticket, Calendar, ShoppingBag } from "lucide-react";
-import Link from "next/link";
+import { ArrowRight, Compass, Star, Clock, Ticket, Calendar } from "lucide-react";
 import Image from "next/image";
-
-// Promotional banner component that's fully clickable
-// Promotional banner component that's fully clickable
-const PromoBanner = () => {
-  return (
-    <Link 
-      href="#passes" 
-      className="block w-full bg-accent py-3 md:py-4 border-b relative z-10 overflow-hidden hover:bg-accent/80 transition-colors cursor-pointer group"
-    >
-      <div className="absolute inset-0 bg-primary/5 animate-pulse-slow" />
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
-        {/* Empty div for creating three-column layout */}
-        <div className="hidden sm:block w-24" /> 
-        
-        {/* Centered promotional text */}
-        <div className="flex items-center justify-center mx-auto">
-          <ShoppingBag className="h-5 w-5 text-primary mr-2 animate-pulse-slow" />
-          <p className="text-sm md:text-base font-medium">
-            <span className="font-bold">Limited Time Offer:</span> 15% OFF Summer Promotion - Don&apos;t Miss Out!
-          </p>
-        </div>
-        
-        {/* View details button on the right */}
-        <span className="inline-flex items-center gap-1 text-primary font-medium text-sm md:text-base whitespace-nowrap">
-          View Details
-          <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-        </span>
-      </div>
-    </Link>
-  );
-};
+import PromoBanner from "@/components/PromoBanner";
 
 const features = [
   { icon: Compass, text: "40+ Popular Places" },

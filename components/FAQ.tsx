@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   Accordion,
   AccordionContent,
@@ -8,13 +9,59 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { faqData } from "@/lib/mockData/faqData";
+import { HelpCircle, CreditCard, Clock, Ticket, LucideIcon } from "lucide-react";
+
+const iconMap: { [key: string]: LucideIcon } = {
+  HelpCircle,
+  CreditCard,
+  Clock,
+  Ticket
+};
+
+interface FAQQuestion {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+interface FAQCategory {
+  id: string;
+  slug: string;
+  label: string;
+  icon_name: string;
+  questions: FAQQuestion[];
+}
 
 export default function FAQ() {
   const [isVisible, setIsVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("");
+  const [categories, setCategories] = useState<FAQCategory[]>([]);
+  const supabase = createClient();
 
   useEffect(() => {
+    const fetchData = async () => {
+      const { data: cats } = await supabase
+        .from('content_faq_categories')
+        .select('*')
+        .order('display_order');
+
+      const { data: qs } = await supabase
+        .from('content_faq_questions')
+        .select('*')
+        .order('display_order');
+
+      if (cats && qs) {
+        const combined = cats.map((c: any) => ({
+          ...c,
+          questions: qs.filter((q: any) => q.category_id === c.id)
+        }));
+        setCategories(combined);
+        if (combined.length > 0) setActiveTab(combined[0].id);
+      }
+    };
+
+    fetchData();
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -35,6 +82,8 @@ export default function FAQ() {
       }
     };
   }, []);
+
+  if (categories.length === 0) return null;
 
   return (
     <section id="faq-section" className="py-16 md:py-20 relative overflow-hidden">
@@ -57,11 +106,11 @@ export default function FAQ() {
 
         <div className={`transition-all duration-700 delay-200 transform
           ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="mb-8 overflow-x-auto hide-scrollbar">
               <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 space-x-6">
-                {faqData.map((category) => {
-                  const Icon = category.icon;
+                {categories.map((category) => {
+                  const Icon = iconMap[category.icon_name] || HelpCircle;
                   return (
                     <TabsTrigger
                       key={category.id}
@@ -78,12 +127,12 @@ export default function FAQ() {
               </TabsList>
             </div>
 
-            {faqData.map((category) => (
+            {categories.map((category) => (
               <TabsContent key={category.id} value={category.id} className="mt-0">
                 <Accordion type="single" collapsible className="space-y-3">
                   {category.questions.map((faq, index) => (
                     <AccordionItem
-                      key={index}
+                      key={faq.id}
                       value={`item-${index}`}
                       className="border border-border/40 bg-card rounded-lg overflow-hidden shadow-sm"
                     >
@@ -108,4 +157,3 @@ export default function FAQ() {
     </section>
   );
 }
-

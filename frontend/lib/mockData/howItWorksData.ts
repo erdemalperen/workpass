@@ -94,7 +94,7 @@ export interface HowItWorksContent {
 }
 
 export const howItWorksData: HowItWorksContent = {
-  title: "How Does the Istanbul Shopping & Food Pass Work?",
+  title: "How Does Shopping & Food Pass Work?",
   subtitle: "Get exclusive discounts at 40+ handpicked locations across Istanbul with our easy-to-use digital pass",
   steps: [
     {

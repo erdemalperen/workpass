@@ -25,6 +25,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "/";
+  const checkEmail = searchParams.get("checkEmail");
   const supabase = useMemo(() => createClient(), []);
 
   const [formData, setFormData] = useState({
@@ -35,6 +36,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (checkEmail) {
+      toast.info("Hesabın oluşturuldu. Lütfen e-postanı kontrol ederek onayla.");
+      router.replace("/login"); // kısa ömürlü parametreyi temizle
+    }
+  }, [checkEmail, router]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -273,6 +281,20 @@ export default function LoginPage() {
                 <Link href="/signup" className="text-primary hover:underline">
                   Sign up
                 </Link>
+              </div>
+
+              <div className="text-xs text-muted-foreground text-center space-y-1">
+                <div>
+                  İşletme hesabı için{" "}
+                  <Link href="/business/login" className="text-primary hover:underline font-medium">
+                    işletme girişi
+                  </Link>{" "}
+                  veya{" "}
+                  <Link href="/business/apply" className="text-primary hover:underline font-medium">
+                    işletme kaydı
+                  </Link>
+                  .
+                </div>
               </div>
 
               <div className="text-xs text-muted-foreground text-center space-y-1">

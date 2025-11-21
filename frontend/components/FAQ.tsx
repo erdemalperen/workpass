@@ -8,11 +8,29 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { faqData } from "@/lib/mockData/faqData";
+import { fetchFaqContent, type FaqCategory, type FaqQuestion } from "@/lib/services/contentService";
+import {
+  HelpCircle,
+  CreditCard,
+  Clock,
+  Ticket,
+  Icon as LucideIcon,
+} from "lucide-react";
+
+const iconMap: Record<string, LucideIcon> = {
+  HelpCircle,
+  CreditCard,
+  Clock,
+  Ticket,
+};
+
+const getIcon = (name: string) => iconMap[name] || HelpCircle;
 
 export default function FAQ() {
   const [isVisible, setIsVisible] = useState(false);
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [categories, setCategories] = useState<FaqCategory[]>([]);
+  const [questions, setQuestions] = useState<FaqQuestion[]>([]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -36,6 +54,21 @@ export default function FAQ() {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const { categories: cats, questions: qs } = await fetchFaqContent();
+        setCategories(cats);
+        setQuestions(qs);
+        if (cats.length > 0) {
+          setActiveTab(cats[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to load FAQ content", error);
+      }
+    })();
+  }, []);
+
   return (
     <section id="faq-section" className="py-16 md:py-20 relative overflow-hidden">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-background via-muted/50 to-background" />
@@ -55,13 +88,16 @@ export default function FAQ() {
           </p>
         </div>
 
-        <div className={`transition-all duration-700 delay-200 transform
-          ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          <Tabs defaultValue="general" value={activeTab} onValueChange={setActiveTab}>
+        <div
+          className={`transition-all duration-700 delay-200 transform ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+          }`}
+        >
+          <Tabs value={activeTab || undefined} onValueChange={setActiveTab}>
             <div className="mb-8 overflow-x-auto hide-scrollbar">
               <TabsList className="w-full justify-start bg-transparent border-b rounded-none h-auto p-0 space-x-6">
-                {faqData.map((category) => {
-                  const Icon = category.icon;
+                {categories.map((category) => {
+                  const Icon = getIcon(category.icon_name);
                   return (
                     <TabsTrigger
                       key={category.id}
@@ -78,27 +114,29 @@ export default function FAQ() {
               </TabsList>
             </div>
 
-            {faqData.map((category) => (
+            {categories.map((category) => (
               <TabsContent key={category.id} value={category.id} className="mt-0">
                 <Accordion type="single" collapsible className="space-y-3">
-                  {category.questions.map((faq, index) => (
-                    <AccordionItem
-                      key={index}
-                      value={`item-${index}`}
-                      className="border border-border/40 bg-card rounded-lg overflow-hidden shadow-sm"
-                    >
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline group">
-                        <div className="flex items-center gap-2 text-left">
-                          <span className="text-sm font-medium group-hover:text-primary transition-colors">
-                            {faq.question}
-                          </span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-3 text-muted-foreground text-xs leading-relaxed">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                  {questions
+                    .filter((q) => q.category_id === category.id)
+                    .map((faq, index) => (
+                      <AccordionItem
+                        key={faq.id ?? index}
+                        value={`item-${index}`}
+                        className="border border-border/40 bg-card rounded-lg overflow-hidden shadow-sm"
+                      >
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline group">
+                          <div className="flex items-center gap-2 text-left">
+                            <span className="text-sm font-medium group-hover:text-primary transition-colors">
+                              {faq.question}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-3 text-muted-foreground text-xs leading-relaxed">
+                          {faq.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    ))}
                 </Accordion>
               </TabsContent>
             ))}
@@ -108,4 +146,3 @@ export default function FAQ() {
     </section>
   );
 }
-

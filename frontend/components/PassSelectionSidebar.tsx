@@ -44,6 +44,7 @@ interface PassSelection {
   adults: number;
   children: number;
   totalPrice: number;
+  discountCode?: string;
 }
 
 export default function PassSelectionSidebar({
@@ -61,29 +62,85 @@ export default function PassSelectionSidebar({
   const [adultCount, setAdultCount] = useState<number>(1);
   const [childCount, setChildCount] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
-  
+  const [discountCode, setDiscountCode] = useState<string>("");
+  const [isValidatingCode, setIsValidatingCode] = useState<boolean>(false);
+  const [codeValidation, setCodeValidation] = useState<{
+    valid: boolean;
+    discountAmount?: number;
+    error?: string;
+  } | null>(null);
+
   const attractionsContainerRef = useRef<HTMLDivElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
   
   // Find the selected pass option based on days
   const selectedOption = passOptions.find(option => option.days === selectedDays) || passOptions[0];
   
+  // Validate discount code
+  const validateDiscountCode = async () => {
+    if (!discountCode.trim()) {
+      setCodeValidation(null);
+      return;
+    }
+
+    setIsValidatingCode(true);
+    try {
+      const subtotal = adultCount * selectedOption.adultPrice + childCount * selectedOption.childPrice;
+
+      const response = await fetch("/api/discount-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code: discountCode,
+          subtotal,
+          pass_id: null, // Can be enhanced to pass actual pass ID
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.valid) {
+        setCodeValidation({
+          valid: true,
+          discountAmount: data.discountAmount,
+        });
+      } else {
+        setCodeValidation({
+          valid: false,
+          error: data.error || "Invalid discount code",
+        });
+      }
+    } catch (error) {
+      console.error("Error validating discount code:", error);
+      setCodeValidation({
+        valid: false,
+        error: "Failed to validate code",
+      });
+    } finally {
+      setIsValidatingCode(false);
+    }
+  };
+
   // Calculate total price - Apply percentage-based discount correctly
   const calculateTotal = () => {
     const adultTotal = adultCount * selectedOption.adultPrice;
     const childTotal = childCount * selectedOption.childPrice;
     const subtotal = adultTotal + childTotal;
-    
-    // Apply discount if available
+
+    // Apply discount code if valid (takes priority)
+    if (codeValidation?.valid && codeValidation.discountAmount) {
+      return subtotal - codeValidation.discountAmount;
+    }
+
+    // Otherwise apply pass discount if available
     if (discount) {
-      // Apply percentage-based discount
       const discountAmount = (subtotal * discount.percentage) / 100;
       return subtotal - discountAmount;
     }
-    
+
     return subtotal;
   };
-  
+
   const totalPrice = calculateTotal();
   
   // Reset state when pass type changes
@@ -120,7 +177,8 @@ export default function PassSelectionSidebar({
       days: selectedDays,
       adults: adultCount,
       children: childCount,
-      totalPrice
+      totalPrice,
+      discountCode: codeValidation?.valid ? discountCode : undefined,
     });
   };
 
@@ -359,35 +417,82 @@ export default function PassSelectionSidebar({
             </div>
           </div>
           
+          {/* Discount Code Section */}
+          <div className="mb-6">
+            <h3 className="font-semibold text-base mb-3">Discount Code</h3>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={discountCode}
+                onChange={(e) => {
+                  setDiscountCode(e.target.value.toUpperCase());
+                  setCodeValidation(null); // Clear validation when typing
+                }}
+                placeholder="Enter code (e.g., SUMMER15)"
+                className="flex-1 px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                maxLength={20}
+              />
+              <Button
+                onClick={validateDiscountCode}
+                disabled={!discountCode.trim() || isValidatingCode}
+                size="sm"
+                variant="outline"
+                className="px-4"
+              >
+                {isValidatingCode ? "..." : "Apply"}
+              </Button>
+            </div>
+
+            {/* Validation feedback */}
+            {codeValidation && (
+              <div className={`mt-2 text-sm ${codeValidation.valid ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                {codeValidation.valid ? (
+                  <div className="flex items-center gap-1">
+                    <span>✓ Code applied! You save ${codeValidation.discountAmount?.toFixed(2)}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span>✗ {codeValidation.error}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Order Summary */}
           {subtotal > 0 && (
             <div className="mb-6 p-4 bg-muted/20 border rounded-md">
               <h3 className="font-medium text-sm mb-2">Order Summary</h3>
-              
+
               <div className="space-y-1 text-sm mb-3">
                 <div className="flex justify-between">
                   <span>Adult Passes ({adultCount})</span>
                   <span>${(adultCount * selectedOption.adultPrice).toFixed(2)}</span>
                 </div>
-                
+
                 {childCount > 0 && (
                   <div className="flex justify-between">
                     <span>Child Passes ({childCount})</span>
                     <span>${(childCount * selectedOption.childPrice).toFixed(2)}</span>
                   </div>
                 )}
-                
+
                 <div className="flex justify-between font-medium pt-2 border-t border-border/30 mt-2">
                   <span>Subtotal</span>
                   <span>${subtotal.toFixed(2)}</span>
                 </div>
-                
-                {discount && discountAmount > 0 && (
+
+                {codeValidation?.valid && codeValidation.discountAmount ? (
+                  <div className="flex justify-between text-green-600 dark:text-green-400">
+                    <span>Discount Code</span>
+                    <span>-${codeValidation.discountAmount.toFixed(2)}</span>
+                  </div>
+                ) : discount && discountAmount > 0 ? (
                   <div className="flex justify-between text-red-500">
                     <span>Discount ({discount.percentage}%)</span>
                     <span>-${discountAmount.toFixed(2)}</span>
                   </div>
-                )}
+                ) : null}
               </div>
             </div>
           )}
