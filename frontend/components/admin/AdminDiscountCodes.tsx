@@ -78,14 +78,14 @@ const createDefaultFormState = () => {
   return {
     code: "",
     description: "",
-    discount_type: "percentage" as const,
+    discount_type: "percentage" as "percentage" | "fixed_amount",
     discount_value: "10",
     max_uses: "",
     max_uses_per_customer: "1",
     min_purchase_amount: "0",
     valid_from: toLocalInputValue(now),
     valid_until: toLocalInputValue(nextWeek),
-    status: "active" as const,
+    status: "active" as "active" | "inactive" | "expired",
   };
 };
 

@@ -156,7 +156,7 @@ export default function WhyIstanbulPass() {
               style={{ transitionDelay: `${300 + index * 100}ms` }}
             >
               <div className={`p-4 bg-card h-full border border-border/50 relative group`}>
-                <div className={`absolute inset-0 bg-gradient-to-br ${benefit.color_gradient || benefit.color || ""} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
+                <div className={`absolute inset-0 bg-gradient-to-br ${benefit.color_gradient || ""} opacity-0 group-hover:opacity-5 transition-opacity duration-300`}></div>
                 <div className="flex flex-col items-center text-center">
                   <div className="mb-3">
                     <div className={`p-3 bg-primary/10 rounded-lg text-primary`}>

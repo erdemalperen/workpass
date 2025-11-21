@@ -14,7 +14,7 @@ import {
   CreditCard,
   Clock,
   Ticket,
-  Icon as LucideIcon,
+  type LucideIcon,
 } from "lucide-react";
 
 const iconMap: Record<string, LucideIcon> = {

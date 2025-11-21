@@ -53,42 +53,42 @@ const supabase = createClient()
 
 export async function fetchFaqContent() {
   const { data: categories } = await supabase
-    .from<FaqCategory>("content_faq_categories")
+    .from("content_faq_categories")
     .select("*")
     .order("display_order", { ascending: true })
 
   const { data: questions } = await supabase
-    .from<FaqQuestion>("content_faq_questions")
+    .from("content_faq_questions")
     .select("*")
     .order("display_order", { ascending: true })
 
-  return { categories: categories ?? [], questions: questions ?? [] }
+  return { categories: (categories ?? []) as FaqCategory[], questions: (questions ?? []) as FaqQuestion[] }
 }
 
 export async function fetchHowItWorksContent() {
   const { data: steps } = await supabase
-    .from<HowStep>("content_how_it_works_steps")
+    .from("content_how_it_works_steps")
     .select("*")
     .order("step_number", { ascending: true })
 
   const { data: details } = await supabase
-    .from<HowDetail>("content_how_it_works_details")
+    .from("content_how_it_works_details")
     .select("*")
     .order("display_order", { ascending: true })
 
-  return { steps: steps ?? [], details: details ?? [] }
+  return { steps: (steps ?? []) as HowStep[], details: (details ?? []) as HowDetail[] }
 }
 
 export async function fetchWhyChooseContent() {
   const { data: features } = await supabase
-    .from<WhyFeature>("content_why_choose_us_features")
+    .from("content_why_choose_us_features")
     .select("*")
     .order("display_order", { ascending: true })
 
   const { data: benefits } = await supabase
-    .from<WhyBenefit>("content_why_choose_us_benefits")
+    .from("content_why_choose_us_benefits")
     .select("*")
     .order("display_order", { ascending: true })
 
-  return { features: features ?? [], benefits: benefits ?? [] }
+  return { features: (features ?? []) as WhyFeature[], benefits: (benefits ?? []) as WhyBenefit[] }
 }
