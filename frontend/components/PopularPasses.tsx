@@ -18,6 +18,7 @@ interface PassSelection {
   adults: number;
   children: number;
   totalPrice: number;
+  discountCode?: string;
 }
 
 // Helper function to get relevant place images for each pass
